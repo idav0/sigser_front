@@ -4,12 +4,14 @@ class TextFieldPassword extends StatefulWidget {
   final TextEditingController controller;
   final String hintText;
   final String labelText;
+  
 
   const TextFieldPassword({
     super.key,
     required this.controller,
     this.hintText = 'Contraseña',
     this.labelText = 'Contraseña',
+
   });
 
   @override
@@ -22,6 +24,11 @@ class _TextFieldPasswordState extends State<TextFieldPassword> {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Por favor, ingrese su contraseña';
+        }
+      },
       controller: widget.controller,
       obscureText: _isObscure,
       decoration: InputDecoration(
