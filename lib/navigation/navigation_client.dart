@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sigser_front/navigation/client/devices.dart';
 import 'package:sigser_front/navigation/client/history.dart';
+import 'package:sigser_front/navigation/client/pending_payment_devices.dart';
 import 'package:sigser_front/navigation/client/profile.dart';
 
 class NavigationClient extends StatefulWidget {
@@ -16,6 +17,7 @@ class _NavigationClientState extends State<NavigationClient> {
       TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
   static const List<Widget> _widgetOptions = <Widget>[
    Devices(),
+   PendingPaymentDevices(),
    History(),
    Profile()
   ];
@@ -38,6 +40,10 @@ class _NavigationClientState extends State<NavigationClient> {
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Mis dispositivos',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Pagos Pendientes',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.start),
