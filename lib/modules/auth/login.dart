@@ -15,7 +15,7 @@ void saveData(data) async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString('token', data.loginInfo.token);
   await prefs.setInt('id', data.userInfo.id);
-  await prefs.setInt('rol', data.);
+  await prefs.setInt('rol', data.authorities.aythority);
 
 }
 
