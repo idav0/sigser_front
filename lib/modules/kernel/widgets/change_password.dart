@@ -1,28 +1,13 @@
 import 'package:flutter/material.dart';
 
-class FirstLogin extends StatefulWidget {
-  const FirstLogin({super.key});
+class ChangePassword extends StatefulWidget {
+  const ChangePassword({super.key});
 
   @override
-  State<FirstLogin> createState() => _FirstLoginState();
+  State<ChangePassword> createState() => _ChangePasswordState();
 }
 
-class _FirstLoginState extends State<FirstLogin>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
+class _ChangePasswordState extends State<ChangePassword> {
   @override
   Widget build(BuildContext context) {
     return const Placeholder();

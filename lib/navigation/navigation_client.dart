@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sigser_front/navigation/client/devices.dart';
+import 'package:sigser_front/navigation/client/devices_client.dart';
 import 'package:sigser_front/navigation/client/history.dart';
 import 'package:sigser_front/navigation/client/pending_payment_devices.dart';
 import 'package:sigser_front/navigation/client/profile.dart';
@@ -16,7 +16,7 @@ class _NavigationClientState extends State<NavigationClient> {
   static const TextStyle optionStyle =
       TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
   static const List<Widget> _widgetOptions = <Widget>[
-   Devices(),
+   DevicesClient(),
    PendingPaymentDevices(),
    History(),
    Profile()
