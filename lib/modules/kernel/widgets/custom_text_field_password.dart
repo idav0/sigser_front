@@ -4,6 +4,7 @@ class TextFieldPassword extends StatefulWidget {
   final TextEditingController controller;
   final String hintText;
   final String labelText;
+  final String? Function(String?)? validator;
   
 
   const TextFieldPassword({
@@ -11,6 +12,7 @@ class TextFieldPassword extends StatefulWidget {
     required this.controller,
     this.hintText = 'Contraseña',
     this.labelText = 'Contraseña',
+    this.validator
 
   });
 
@@ -24,11 +26,7 @@ class _TextFieldPasswordState extends State<TextFieldPassword> {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Por favor, ingrese su contraseña';
-        }
-      },
+      validator: widget.validator,
       controller: widget.controller,
       obscureText: _isObscure,
       decoration: InputDecoration(
@@ -37,11 +35,11 @@ class _TextFieldPasswordState extends State<TextFieldPassword> {
         suffixIcon: IconButton(
           onPressed: () {
             setState(() {
-              _isObscure = !_isObscure;
+              _isObscure =!_isObscure;
             });
           },
           icon: Icon(
-            _isObscure ? Icons.visibility : Icons.visibility_off,
+            _isObscure ? Icons.visibility_off : Icons.visibility,
           ),
         ),
       ),
