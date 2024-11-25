@@ -29,7 +29,6 @@ class _TextFieldPasswordState extends State<TextFieldPassword> {
       validator: widget.validator,
       controller: widget.controller,
       obscureText: _isObscure,
-      validator:widget.validator,
       decoration: InputDecoration(
         hintText: widget.hintText,
         labelText: widget.labelText,

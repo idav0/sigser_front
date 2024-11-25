@@ -72,7 +72,7 @@ class _LoginState extends State<Login> {
     );
 
     if (!passwordRegExp.hasMatch(value)) {
-      return 'La contraseña debe tener al menos 8 caracteres, incluir una letra, un número, una mayúscula y un carácter especial';
+      return 'Contraseña incorrecta';
     }
     return null;
   }

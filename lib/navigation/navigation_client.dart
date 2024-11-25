@@ -38,19 +38,19 @@ class _NavigationClientState extends State<NavigationClient> {
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.home),
+            icon: Icon(Icons.devices),
             label: 'Mis dispositivos',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.home),
+            icon: Icon(Icons.paid),
             label: 'Pagos Pendientes',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.start),
+            icon: Icon(Icons.history),
             label: 'Historial',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.room_service),
+            icon: Icon(Icons.person),
             label: 'Perfil',
           ),
         ],

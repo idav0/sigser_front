@@ -40,19 +40,19 @@ class _NavigationTechnicianState extends State<NavigationTechnician> {
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.home),
+            icon: Icon(Icons.qr_code_2),
             label: 'Escanear QR',
           ),
            BottomNavigationBarItem(
-            icon: Icon(Icons.start),
+            icon: Icon(Icons.devices),
             label: 'Dispositivos',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.start),
+            icon: Icon(Icons.history),
             label: 'Historial',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.room_service),
+            icon: Icon(Icons.person),
             label: 'Perfil',
           ),
         ],
