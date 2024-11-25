@@ -5,7 +5,7 @@ class TextFieldPassword extends StatefulWidget {
   final String hintText;
   final String labelText;
   final String? Function(String?)? validator;
-  
+
 
   const TextFieldPassword({
     super.key,
@@ -29,6 +29,7 @@ class _TextFieldPasswordState extends State<TextFieldPassword> {
       validator: widget.validator,
       controller: widget.controller,
       obscureText: _isObscure,
+      validator:widget.validator,
       decoration: InputDecoration(
         hintText: widget.hintText,
         labelText: widget.labelText,
@@ -39,7 +40,8 @@ class _TextFieldPasswordState extends State<TextFieldPassword> {
             });
           },
           icon: Icon(
-            _isObscure ? Icons.visibility_off : Icons.visibility,
+            _isObscure ? Icons.visibility : Icons.visibility_off,
+             color: _isObscure ? Colors.grey : Colors.blue, 
           ),
         ),
       ),
