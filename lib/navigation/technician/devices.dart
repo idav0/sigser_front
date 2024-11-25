@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class Devices extends StatefulWidget {
-  const Devices({super.key});
+  const Devices({Key? key}) : super(key: key);
 
   @override
   State<Devices> createState() => _DevicesState();
@@ -11,8 +11,9 @@ class _DevicesState extends State<Devices> {
   final List<Map<String, String>> devices = [
     {
       'id': '001',
-      'modelo': 'Laptop Pro X',
-      'marca': 'TechBrand',
+      'tipo': 'Celular',
+      'modelo': 'iPhone 14',
+      'marca': 'Apple',
       'serie': 'SN12345',
       'problema': 'No enciende',
       'cliente': 'Juan Pérez',
@@ -22,8 +23,9 @@ class _DevicesState extends State<Devices> {
     },
     {
       'id': '002',
-      'modelo': 'Monitor 4K',
-      'marca': 'DisplayCorp',
+      'tipo': 'Computadora',
+      'modelo': 'Laptop Pro X',
+      'marca': 'TechBrand',
       'serie': 'SN98765',
       'problema': 'Pantalla dañada',
       'cliente': 'Ana López',
@@ -31,15 +33,116 @@ class _DevicesState extends State<Devices> {
       'estado': 'En espera de piezas',
       'diagnostico': 'El panel LCD está roto y requiere reemplazo.',
     },
+    {
+      'id': '003',
+      'tipo': 'Monitor',
+      'modelo': 'Monitor 4K',
+      'marca': 'DisplayCorp',
+      'serie': 'SN112233',
+      'problema': 'Sin señal',
+      'cliente': 'Carlos Méndez',
+      'fecha': '2024-11-25',
+      'estado': 'En reparación',
+      'diagnostico': 'El cable HDMI está dañado y necesita ser reemplazado.',
+    },
   ];
 
-  void _showDiagnosticModal(BuildContext context, String diagnostico) {
+  void _showDiagnosticModal(BuildContext context, Map<String, String> device) {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Diagnóstico'),
-          content: Text(diagnostico),
+          title: const Text(
+            'Detalles de Reparación',
+            style: TextStyle(color: Color(0xff172554)),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'ID del Registro:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+                Text(device['id']!),
+                const SizedBox(height: 8),
+                const Text(
+                  'Tipo:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+                Text(device['tipo']!),
+                const SizedBox(height: 8),
+                const Text(
+                  'Modelo:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+                Text(device['modelo']!),
+                const SizedBox(height: 8),
+                const Text(
+                  'Marca:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+                Text(device['marca']!),
+                const SizedBox(height: 8),
+                const Text(
+                  'Número de Serie:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+                Text(device['serie']!),
+                const SizedBox(height: 8),
+                const Text(
+                  'Descripción del Problema:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+                Text(device['problema']!),
+                const SizedBox(height: 8),
+                const Text(
+                  'Cliente Propietario:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+                Text(device['cliente']!),
+                const SizedBox(height: 8),
+                const Text(
+                  'Fecha de Ingreso:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+                Text(device['fecha']!),
+                const SizedBox(height: 8),
+                const Text(
+                  'Diagnóstico:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+                Text(device['diagnostico']!),
+              ],
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () {
@@ -53,81 +156,161 @@ class _DevicesState extends State<Devices> {
     );
   }
 
+  IconData _getDeviceIcon(String tipo) {
+    switch (tipo) {
+      case 'Celular':
+        return Icons.phone_iphone;
+      case 'Computadora':
+        return Icons.laptop;
+      case 'Monitor':
+        return Icons.desktop_mac;
+      case 'Tablet':
+        return Icons.tablet;
+      default:
+        return Icons.devices;
+    }
+  }
+
+  IconData _getEstadoIcon(String estado) {
+    switch (estado) {
+      case 'Ingresado':
+        return Icons.add_task;
+      case 'Diagnóstico':
+        return Icons.medical_services;
+      case 'Cotización':
+        return Icons.receipt_long;
+      case 'En espera de aceptación del cliente':
+        return Icons.hourglass_empty;
+      case 'En espera de piezas':
+        return Icons.timelapse;
+      case 'En reparación':
+        return Icons.build;
+      case 'Listo para entrega':
+        return Icons.check_circle;
+      case 'Entregado':
+        return Icons.done_all;
+      default:
+        return Icons.error;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar:  AppBar(
         title: const Text('Dispositivos Registrados'),
       ),
-      body: ListView.builder(
-        itemCount: devices.length,
-        itemBuilder: (context, index) {
-          final device = devices[index];
-          return GestureDetector(
-            onTap: () => _showDiagnosticModal(context, device['diagnostico']!),
-            child: Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Ícono del dispositivo
-                    const Padding(
-                      padding: EdgeInsets.only(right: 16.0),
-                      child: Icon(
-                        Icons.devices, // Ícono general de dispositivo
-                        size: 40,
-                        color: Colors.blueGrey,
-                      ),
-                    ),
-                    // Información del dispositivo
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'ID: ${device['id']}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          Text('Modelo: ${device['modelo']}'),
-                          Text('Marca: ${device['marca']}'),
-                          Text('Número de Serie: ${device['serie']}'),
-                          Text('Descripción del Problema: ${device['problema']}'),
-                          Text('Cliente: ${device['cliente']}'),
-                          Text('Fecha de Ingreso: ${device['fecha']}'),
-                        ],
-                      ),
-                    ),
-                    // Círculo del estado
-                    Column(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isMobile = constraints.maxWidth < 600;
+          return ListView.builder(
+            itemCount: devices.length,
+            itemBuilder: (context, index) {
+              final device = devices[index];
+              return GestureDetector(
+                onTap: () => _showDiagnosticModal(context, device),
+                child: Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  elevation: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        CircleAvatar(
-                          backgroundColor: _getColorForEstado(device['estado']!),
-                          radius: 30, // Tamaño reducido del círculo
-                          child: const Icon(
-                            Icons.check_circle_outline,
-                            color: Colors.white,
-                            size: 30,
-                          ),
+                        Icon(
+                          _getDeviceIcon(device['tipo']!),
+                          size: 50,
+                          color: Colors.blueGrey,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          device['estado']!,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                          textAlign: TextAlign.center,
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              children: [
+                                Text(
+                                  'Modelo',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: isMobile ? 12 : 14,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                                Text(
+                                  device['modelo']!,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 12 : 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                Text(
+                                  'Marca',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: isMobile ? 12 : 14,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                                Text(
+                                  device['marca']!,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 12 : 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                Text(
+                                  'Fecha',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: isMobile ? 12 : 14,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                                Text(
+                                  device['fecha']!,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 12 : 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Column(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: _getColorForEstado(device['estado']!),
+                              radius: isMobile ? 20 : 25,
+                              child: Icon(
+                                _getEstadoIcon(device['estado']!),
+                                color: Colors.white,
+                                size: isMobile ? 18 : 20,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              device['estado']!,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: isMobile ? 12 : 14,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           );
         },
       ),
@@ -139,17 +322,17 @@ class _DevicesState extends State<Devices> {
       case 'Ingresado':
         return Colors.green;
       case 'Diagnóstico':
-        return Colors.yellow;
-      case 'Cotización':
         return Colors.orange;
+      case 'Cotización':
+        return Colors.yellow;
       case 'En espera de aceptación del cliente':
-        return Colors.redAccent;
-      case 'En espera de piezas':
-        return Colors.blueGrey;
-      case 'En reparación':
         return Colors.blue;
-      case 'Listo para entrega':
+      case 'En espera de piezas':
+        return Colors.red;
+      case 'En reparación':
         return Colors.purple;
+      case 'Listo para entrega':
+        return Colors.cyan;
       case 'Entregado':
         return Colors.teal;
       default:
