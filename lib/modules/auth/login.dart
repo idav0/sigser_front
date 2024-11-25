@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:sigser_front/modules/kernel/widgets/custom_text_field_password.dart';
 
@@ -13,6 +14,8 @@ class Login extends StatefulWidget {
 }
 
 void saveData(data) async {
+
+
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString('token', data.loginInfo.token);
   await prefs.setInt('id', data.userInfo.id);
@@ -40,7 +43,7 @@ void showIncorrectDialog(BuildContext context) {
 }
 
 class _LoginState extends State<Login> {
-  final Dio _dio = Dio(BaseOptions(baseUrl: 'url'));
+  final Dio _dio = Dio(BaseOptions(baseUrl:'${dotenv.env['BASE_URL']}'));
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -166,7 +169,15 @@ class _LoginState extends State<Login> {
                         onPressed: () async {
                           if (_formKey.currentState!.validate()) {
                             try {
-                              final response = await _dio.post('/resto de url');
+                              var dataUser = {
+                                  'username': _emailController.text, // Reemplaza con el nombre de usuario
+                                  'password': _passwordController.text // Reemplaza con la contraseña
+                                };
+                              final response = await _dio.post(
+                                '/auth/login',
+                                data: dataUser
+                                );
+                              print(response);
                               if (response.data.status == 403) {
                                 Navigator.pushNamed(context, '/changePassword');
                               } else if (response.data.status == 200) {
