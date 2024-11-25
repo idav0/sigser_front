@@ -6,12 +6,14 @@ class TextFieldPassword extends StatefulWidget {
   final String labelText;
   final String? Function(String?)? validator;
 
+
   const TextFieldPassword({
     super.key,
     required this.controller,
     this.hintText = 'Contraseña',
     this.labelText = 'Contraseña',
     this.validator
+
   });
 
   @override
@@ -24,6 +26,7 @@ class _TextFieldPasswordState extends State<TextFieldPassword> {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
+      validator: widget.validator,
       controller: widget.controller,
       obscureText: _isObscure,
       validator:widget.validator,
@@ -33,7 +36,7 @@ class _TextFieldPasswordState extends State<TextFieldPassword> {
         suffixIcon: IconButton(
           onPressed: () {
             setState(() {
-              _isObscure = !_isObscure;
+              _isObscure =!_isObscure;
             });
           },
           icon: Icon(
