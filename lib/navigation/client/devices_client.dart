@@ -60,6 +60,9 @@ class _DevicesClientState extends State<DevicesClient> {
           actions: [
             TextButton(
               onPressed: () {
+                setState(() {
+                  device['estado'] = 'Listo para entrega';
+                });
                 Navigator.of(context).pop();
               },
               child: const Text('Cancelar'),
@@ -67,7 +70,7 @@ class _DevicesClientState extends State<DevicesClient> {
             ElevatedButton(
               onPressed: () {
                 setState(() {
-                  device['estado'] = 'Listo para entrega';
+                  device['estado'] = 'En reparación';
                 });
                 Navigator.of(context).pop();
               },
@@ -122,7 +125,9 @@ class _DevicesClientState extends State<DevicesClient> {
         ? Colors.green
         : estado == 'Listo para entrega'
             ? Colors.blue
-            : Colors.grey;
+            : estado == 'En reparación'
+            ? const Color.fromARGB(255, 145, 33, 243)
+            : Colors.orange;
   }
 
   @override
