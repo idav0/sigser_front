@@ -8,10 +8,14 @@ import 'package:sigser_front/navigation/client/devices_client.dart';
 import 'package:sigser_front/navigation/navigation_client.dart';
 import 'package:sigser_front/navigation/navigation_technician.dart';
 import 'package:sigser_front/navigation/technician/devices.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 
-void main() {
+void main() async {
+  await dotenv.load(fileName: ".env");
   runApp(const MainApp());
+ 
+
 }
 
 class MainApp extends StatelessWidget {
