@@ -12,12 +12,10 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   final TextEditingController _emailController = TextEditingController();
 
   String? validateEmail(String? value) {
-    // Expresión regular para validar un correo electrónico estándar
     final RegExp emailRegExp = RegExp(
       r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
     );
 
-    // Validaciones
     if (value == null || value.isEmpty) {
       return 'Por favor, ingrese su correo electrónico';
     } else if (!emailRegExp.hasMatch(value)) {
@@ -31,9 +29,9 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   }
 
   void _sendRecoveryEmail() {
-    // Validar el formulario antes de proceder
     if (_formKey.currentState!.validate()) {
       final email = _emailController.text;
+      Navigator.pushNamed(context, '/recoverPassword');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Se ha enviado un correo de recuperación a $email'),
@@ -55,13 +53,13 @@ class _ForgotPasswordState extends State<ForgotPassword> {
         padding: const EdgeInsets.all(16.0),
         child: Center(
           child: Form(
-            key: _formKey, // Vincula el formulario para validaciones
+            key: _formKey, 
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
-                  'assets/logo.png', // Cambia esto por la ruta de tu logo
+                  'assets/logo.png', 
                   width: 80,
                   height: 80,
                 ),
@@ -85,10 +83,10 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                 ),
                 const SizedBox(height: 20),
                 SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.8, // 70% del ancho
+                  width: MediaQuery.of(context).size.width * 0.8, 
                   child: TextFormField(
                     controller: _emailController,
-                    validator: validateEmail, // Validador para el campo
+                    validator: validateEmail, 
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
                       labelText: 'Correo electrónico',
@@ -99,9 +97,9 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                 ),
                 const SizedBox(height: 20),
                 SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.8, // 70% del ancho
+                  width: MediaQuery.of(context).size.width * 0.8, 
                   child: ElevatedButton(
-                    onPressed: _sendRecoveryEmail, // Llama a la función al presionar
+                    onPressed: _sendRecoveryEmail, 
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color.fromARGB(255, 5, 8, 167),
                       foregroundColor: Colors.white,

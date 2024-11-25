@@ -15,7 +15,6 @@ class _RecoverPasswordState extends State<RecoverPassword> {
       TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  // Validador para la contraseña
   String? validatePassword(String? value) {
     final RegExp passwordRegExp = RegExp(
         r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$');
@@ -30,7 +29,6 @@ class _RecoverPasswordState extends State<RecoverPassword> {
     return null;
   }
 
-  // Lógica para verificar y guardar la nueva contraseña
   void _resetPassword() {
     if (_formKey.currentState!.validate()) {
       if (_passwordController.text != _confirmPasswordController.text) {
@@ -43,13 +41,13 @@ class _RecoverPasswordState extends State<RecoverPassword> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Contraseña restablecida con éxito')),
       );
-
-      // Aquí puedes agregar la lógica para enviar los datos al servidor
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final double fieldWidth = MediaQuery.of(context).size.width * 0.8;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Recuperar contraseña'),
@@ -67,7 +65,7 @@ class _RecoverPasswordState extends State<RecoverPassword> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
-                  'assets/logo.png', // Cambia esto por la ruta de tu logo
+                  'assets/logo.png',
                   width: 80,
                   height: 80,
                 ),
@@ -81,33 +79,39 @@ class _RecoverPasswordState extends State<RecoverPassword> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
-                // Campo para el token
-                TextFormField(
-                  controller: _tokenController,
-                  decoration: const InputDecoration(
-                    labelText: 'Token de recuperación',
-                    border: OutlineInputBorder(),
+                SizedBox(
+                  width: fieldWidth,
+                  child: TextFormField(
+                    controller: _tokenController,
+                    decoration: const InputDecoration(
+                      labelText: 'Token de recuperación',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) =>
+                        value!.isEmpty ? 'Por favor, ingresa el token' : null,
                   ),
-                  validator: (value) =>
-                      value!.isEmpty ? 'Por favor, ingresa el token' : null,
-                ),
-                const SizedBox(height: 20),
-                // Campo para la nueva contraseña
-                TextFieldPassword(
-                  controller: _passwordController,
-                  hintText: 'Nueva contraseña',
-                  labelText: 'Nueva contraseña',
-                ),
-                const SizedBox(height: 20),
-                // Campo para confirmar contraseña
-                TextFieldPassword(
-                  controller: _confirmPasswordController,
-                  hintText: 'Confirmar contraseña',
-                  labelText: 'Confirmar contraseña',
                 ),
                 const SizedBox(height: 20),
                 SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.8,
+                  width: fieldWidth,
+                  child: TextFieldPassword(
+                    controller: _passwordController,
+                    hintText: 'Nueva contraseña',
+                    labelText: 'Nueva contraseña',
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: fieldWidth,
+                  child: TextFieldPassword(
+                    controller: _confirmPasswordController,
+                    hintText: 'Confirmar contraseña',
+                    labelText: 'Confirmar contraseña',
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: fieldWidth,
                   child: ElevatedButton(
                     onPressed: _resetPassword,
                     style: ElevatedButton.styleFrom(
