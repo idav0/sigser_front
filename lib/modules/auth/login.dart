@@ -212,16 +212,16 @@ class _LoginState extends State<Login> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(255, 17, 24, 39), // Color de fondo
-                          foregroundColor: Colors.white, // Texto blanco
+                          backgroundColor: const Color.fromARGB(255, 17, 24, 39), 
+                          foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          minimumSize: const Size(double.infinity, 56), // Más largo y alto
+                          minimumSize: const Size(double.infinity, 56), 
                         ),
                         child: const Text(
                           'Iniciar sesión',
-                          style: TextStyle(fontSize: 18), // Tamaño del texto
+                          style: TextStyle(fontSize: 18), 
                         ),
                       ),
                     ),
