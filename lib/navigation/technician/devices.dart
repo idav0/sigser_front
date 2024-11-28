@@ -8,44 +8,7 @@ class Devices extends StatefulWidget {
 }
 
 class _DevicesState extends State<Devices> {
-  final List<Map<String, String>> devices = [
-    {
-      'id': '001',
-      'tipo': 'Celular',
-      'modelo': 'iPhone 14',
-      'marca': 'Apple',
-      'serie': 'SN12345',
-      'problema': 'No enciende',
-      'cliente': 'Juan Pérez',
-      'fecha': '2024-11-20',
-      'estado': 'Diagnóstico',
-      'diagnostico': 'El circuito de encendido está quemado.',
-    },
-    {
-      'id': '002',
-      'tipo': 'Computadora',
-      'modelo': 'Laptop Pro X',
-      'marca': 'TechBrand',
-      'serie': 'SN98765',
-      'problema': 'Pantalla dañada',
-      'cliente': 'Ana López',
-      'fecha': '2024-11-22',
-      'estado': 'En espera de piezas',
-      'diagnostico': 'El panel LCD está roto y requiere reemplazo.',
-    },
-    {
-      'id': '003',
-      'tipo': 'Monitor',
-      'modelo': 'Monitor 4K',
-      'marca': 'DisplayCorp',
-      'serie': 'SN112233',
-      'problema': 'Sin señal',
-      'cliente': 'Carlos Méndez',
-      'fecha': '2024-11-25',
-      'estado': 'En reparación',
-      'diagnostico': 'El cable HDMI está dañado y necesita ser reemplazado.',
-    },
-  ];
+  final List<Map<String, String>> devices = [];
 
   void _showDiagnosticModal(BuildContext context, Map<String, String> device) {
     showDialog(
