@@ -19,28 +19,29 @@ void saveData(data, devices) async {
   final prefs = await SharedPreferences.getInstance();
 
   var userInfo = data['data']['userInfo'];
-  var authority = userInfo['authorities'][0]['authority'];
+  var authority = userInfo['authorities'][0]['authority']; // Obtener rol
   var userId = userInfo['id'];
   var token = data['data']['loginInfo']['token'];
-  var name = userInfo['name'];
-  var lastname = userInfo['lastname'];
-  var email = userInfo['email'];
-  var phone = userInfo['phone'];
-  var ListDevices = jsonEncode(devices['data']); 
+
+  // Validar y asignar valores
+  var name = userInfo['name'] ?? ''; // Usar valor predeterminado si es nulo
+  var lastname = userInfo['lastname'] ?? '';
+  var email = userInfo['email'] ?? '';
+  var phone = userInfo['phone'] ?? '';
+  var ListDevices = jsonEncode(devices['data']);
 
   // Guardar datos del usuario en SharedPreferences
-  await prefs.setString('listDevices', ListDevices); 
-  await prefs.setString('token', token); 
-  await prefs.setInt('id', userId); 
-  await prefs.setInt('lastname', lastname); 
+  await prefs.setString('listDevices', ListDevices);
+  await prefs.setString('token', token);
+  await prefs.setInt('id', userId);
+  await prefs.setString('lastname', lastname);
   await prefs.setString('rol', authority);
   await prefs.setString('name', name);
   await prefs.setString('email', email);
   await prefs.setString('phone', phone);
-  
 }
 
-void showCorrectDialog(BuildContext context) {
+void showCorrectDialog(BuildContext context, String authority) {
   AwesomeDialog(
     context: context,
     dialogType: DialogType.success,
@@ -50,7 +51,14 @@ void showCorrectDialog(BuildContext context) {
   ).show();
 
   Future.delayed(Duration(seconds: 2), () {
-    Navigator.pushNamed(context, '/menuClient');
+    // Redirigir según el rol del usuario
+    if (authority == 'TECHNICIAN') {
+      Navigator.pushNamed(
+          context, '/menuTechnician'); // Navegar al menú de técnicos
+    } else {
+      Navigator.pushNamed(
+          context, '/menuClient'); // Navegar al menú de clientes
+    }
   });
 }
 
@@ -172,17 +180,29 @@ class _LoginState extends State<Login> {
                                 data: dataUser,
                               );
                               if (response.statusCode == 200) {
+                                var userInfo =
+                                    response.data['data']['userInfo'];
+                                var authority = userInfo['authorities'][0]
+                                    ['authority']; // Obtener el rol
+
+                                // Obtener dispositivos (si es necesario)
                                 final devices = await _dio.get(
-                                  '/repair/client/${response.data['data']['userInfo']['id']}',
+                                  authority == 'TECHNICIAN'
+                                      ? '/repair/technician/${userInfo['id']}'
+                                      : '/repair/client/${userInfo['id']}',
                                   options: Options(
                                     headers: {
                                       'Authorization':
-                                          'Bearer ${response.data['data']['loginInfo']['token']}',
+                                          'Bearer${response.data['data']['loginInfo']['token']}',
                                     },
                                   ),
                                 );
+
+                                // Guardar datos del usuario
                                 saveData(response.data, devices.data);
-                                showCorrectDialog(context);
+
+                                // Llamar a showCorrectDialog con el rol
+                                showCorrectDialog(context, authority);
                               }
                             } catch (e) {
                               AwesomeDialog(
@@ -196,7 +216,8 @@ class _LoginState extends State<Login> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(255, 17, 24, 39),
+                          backgroundColor:
+                              const Color.fromARGB(255, 17, 24, 39),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),

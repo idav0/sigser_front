@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sigser_front/modules/kernel/widgets/repair_form_screen.dart';
 
 class Devices extends StatefulWidget {
   const Devices({Key? key}) : super(key: key);
@@ -15,7 +16,7 @@ class _DevicesState extends State<Devices> {
   @override
   void initState() {
     super.initState();
-    _loadDevicesFromPreferences(); // Cargar dispositivos desde SharedPreferences
+    _loadDevicesFromPreferences();
   }
 
   Future<void> _loadDevicesFromPreferences() async {
@@ -34,7 +35,7 @@ class _DevicesState extends State<Devices> {
             'marca': device['device']['brand'].toString(),
             'serie': device['device']['serialNumber'].toString(),
             'problema': device['problem_description'].toString(),
-            'cliente': device['cliente'] ?? 'Desconocido', // Cliente opcional
+            'cliente': device['cliente'] ?? 'Desconocido',
             'fecha': device['entry_date'].toString(),
             'diagnostico':
                 (device['diagnostic_observations'] ?? 'N/A').toString(),
@@ -46,9 +47,14 @@ class _DevicesState extends State<Devices> {
           devices.addAll(adaptedDevices);
         });
       } catch (e) {
-        // Manejo de errores
-        print('Error al cargar dispositivos: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cargar dispositivos: $e')),
+        );
       }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se encontraron dispositivos guardados.')),
+      );
     }
   }
 
@@ -61,9 +67,7 @@ class _DevicesState extends State<Devices> {
         buttonText = 'Iniciar Diagnóstico';
         buttonAction = () {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Iniciando diagnóstico...')),
-          );
+          _openRepairForm(device);
         };
         break;
       case 'DIAGNOSIS':
@@ -81,46 +85,6 @@ class _DevicesState extends State<Devices> {
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Aprobando cotización...')),
-          );
-        };
-        break;
-      case 'WAITING_FOR_COSTUMER_APPROVAL':
-        buttonText = 'Esperando Aprobación del Cliente';
-        buttonAction = null;
-        break;
-      case 'WAITING_FOR_PARTS':
-        buttonText = 'Confirmar Recepción de Piezas';
-        buttonAction = () {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Confirmando recepción de piezas...')),
-          );
-        };
-        break;
-      case 'REPAIRING':
-        buttonText = 'Finalizar Reparación';
-        buttonAction = () {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Finalizando reparación...')),
-          );
-        };
-        break;
-      case 'READY_FOR_COLLECTION':
-        buttonText = 'Marcar como Entregado';
-        buttonAction = () {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Marcando como entregado...')),
-          );
-        };
-        break;
-      case 'COLLECTED':
-        buttonText = 'Ver Detalles';
-        buttonAction = () {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Mostrando detalles...')),
           );
         };
         break;
@@ -173,6 +137,17 @@ class _DevicesState extends State<Devices> {
           ],
         );
       },
+    );
+  }
+
+  void _openRepairForm(Map<String, dynamic> device) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RepairFormScreen(
+          repairId: int.parse(device['id']),
+        ),
+      ),
     );
   }
 
