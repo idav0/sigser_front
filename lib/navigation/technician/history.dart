@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class History extends StatefulWidget {
   const History({super.key});
@@ -8,59 +10,65 @@ class History extends StatefulWidget {
 }
 
 class _HistoryState extends State<History> {
-  final List<Map<String, String>> devices = [
-    {
-      'id': '001',
-      'tipo': 'Celular',
-      'modelo': 'iPhone 14',
-      'marca': 'Apple',
-      'serie': 'SN12345',
-      'problema': 'No enciende',
-      'cliente': 'Juan Pérez',
-      'fecha': '2024-11-20',
-      'estado': 'Entregado',
-      'diagnostico': 'El circuito de encendido está quemado.',
-    },
-    {
-      'id': '002',
-      'tipo': 'Computadora',
-      'modelo': 'Laptop Pro X',
-      'marca': 'TechBrand',
-      'serie': 'SN98765',
-      'problema': 'Pantalla dañada',
-      'cliente': 'Ana López',
-      'fecha': '2024-11-22',
-      'estado': 'Entregado',
-      'diagnostico': 'El panel LCD está roto y requiere reemplazo.',
-    },
-    {
-      'id': '003',
-      'tipo': 'Monitor',
-      'modelo': 'Monitor 4K',
-      'marca': 'DisplayCorp',
-      'serie': 'SN112233',
-      'problema': 'Sin señal',
-      'cliente': 'Carlos Méndez',
-      'fecha': '2024-11-25',
-      'estado': 'Entregado',
-      'diagnostico': 'El cable HDMI está dañado y necesita ser reemplazado.',
-    },
-  ];
+  final List<Map<String, dynamic>> devices = []; // Lista dinámica para almacenar dispositivos
 
   String searchText = '';
   String selectedDeviceType = 'Todos';
   String dateOrder = 'Más recientes'; // Predeterminado
-  List<String> dateOrderOptions = ['Más recientes', 'Más antiguos'];
+  final List<String> dateOrderOptions = ['Más recientes', 'Más antiguos'];
+  final List<String> deviceTypes = ['Todos', 'SMARTPHONE', 'LAPTOP', 'MONITOR'];
 
-  List<String> deviceTypes = ['Todos', 'Celular', 'Computadora', 'Monitor'];
+  @override
+  void initState() {
+    super.initState();
+    _loadDevices(); // Cargar dispositivos desde SharedPreferences
+  }
 
-  List<Map<String, String>> get filteredDevices {
-    List<Map<String, String>> filtered = devices
+  Future<void> _loadDevices() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? devicesJson = prefs.getString('listDevices'); // Obtener el JSON almacenado
+
+    if (devicesJson != null) {
+      try {
+        List<dynamic> jsonList = jsonDecode(devicesJson);
+
+        // Adaptar datos al formato esperado
+        List<Map<String, dynamic>> adaptedDevices = jsonList.map((device) {
+          return {
+            'id': device['id'],
+            'tipo': device['device']['deviceType']['name'],
+            'modelo': device['device']['model'],
+            'marca': device['device']['brand'],
+            'serie': device['device']['serialNumber'],
+            'problema': device['problem_description'],
+            'cliente': device['cliente'] ?? 'Desconocido', // Cliente opcional
+            'fecha': device['entry_date'],
+            'diagnostico': device['diagnostic_observations'] ?? 'N/A',
+            'estado': device['repairStatus']['name'],
+          };
+        }).toList();
+
+        setState(() {
+          devices.addAll(adaptedDevices); // Agregar dispositivos adaptados
+        });
+      } catch (e) {
+        print('Error al cargar dispositivos: $e'); // Manejo de errores
+      }
+    }
+  }
+
+  List<Map<String, dynamic>> get filteredDevices {
+    List<Map<String, dynamic>> filtered = devices
         .where((device) =>
-            device['estado'] == 'Entregado' &&
-            (device['modelo']!.toLowerCase().contains(searchText.toLowerCase()) ||
-                device['marca']!.toLowerCase().contains(searchText.toLowerCase()) ||
-                device['cliente']!.toLowerCase().contains(searchText.toLowerCase())))
+            device['estado'] == 'COLLECTED' &&
+            (device['modelo']
+                    .toString()
+                    .toLowerCase()
+                    .contains(searchText.toLowerCase()) ||
+                device['marca']
+                    .toString()
+                    .toLowerCase()
+                    .contains(searchText.toLowerCase())))
         .toList();
 
     if (selectedDeviceType != 'Todos') {
@@ -70,11 +78,9 @@ class _HistoryState extends State<History> {
     }
 
     filtered.sort((a, b) {
-      final dateA = a['fecha']!;
-      final dateB = b['fecha']!;
-      return dateOrder == 'Más recientes'
-          ? dateB.compareTo(dateA)
-          : dateA.compareTo(dateB);
+      final dateA = DateTime.parse(a['fecha']);
+      final dateB = DateTime.parse(b['fecha']);
+      return dateOrder == 'Más recientes' ? dateB.compareTo(dateA) : dateA.compareTo(dateB);
     });
 
     return filtered;
@@ -82,13 +88,13 @@ class _HistoryState extends State<History> {
 
   IconData _getDeviceIcon(String tipo) {
     switch (tipo) {
-      case 'Celular':
-        return Icons.phone_iphone;
-      case 'Computadora':
+      case 'SMARTPHONE':
+        return Icons.phone_android;
+      case 'LAPTOP':
         return Icons.laptop;
-      case 'Monitor':
+      case 'MONITOR':
         return Icons.desktop_mac;
-      case 'Tablet':
+      case 'TABLET':
         return Icons.tablet;
       default:
         return Icons.devices;
@@ -99,7 +105,7 @@ class _HistoryState extends State<History> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dispositivos Registrados'),
+        title: const Text('Historial de Dispositivos'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -177,7 +183,7 @@ class _HistoryState extends State<History> {
               child: filteredDevices.isEmpty
                   ? const Center(
                       child: Text(
-                        'No hay dispositivos que coincidan con los filtros.',
+                        'No hay dispositivos con estado COLLECTED.',
                         style: TextStyle(fontSize: 16, color: Colors.grey),
                       ),
                     )
@@ -195,7 +201,7 @@ class _HistoryState extends State<History> {
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Icon(
-                                  _getDeviceIcon(device['tipo']!),
+                                  _getDeviceIcon(device['tipo']),
                                   size: 50,
                                   color: Colors.blueGrey,
                                 ),
@@ -213,7 +219,7 @@ class _HistoryState extends State<History> {
                                             color: Colors.blue,
                                           ),
                                         ),
-                                        Text(device['modelo']!),
+                                        Text(device['modelo']),
                                       ],
                                     ),
                                     Column(
@@ -225,7 +231,7 @@ class _HistoryState extends State<History> {
                                             color: Colors.blue,
                                           ),
                                         ),
-                                        Text(device['marca']!),
+                                        Text(device['marca']),
                                       ],
                                     ),
                                     Column(
@@ -237,14 +243,14 @@ class _HistoryState extends State<History> {
                                             color: Colors.blue,
                                           ),
                                         ),
-                                        Text(device['fecha']!),
+                                        Text(device['fecha']),
                                       ],
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  device['estado']!,
+                                  device['estado'],
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: Colors.teal,
