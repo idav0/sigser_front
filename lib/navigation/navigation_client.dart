@@ -4,6 +4,7 @@ import 'package:sigser_front/navigation/client/history.dart';
 import 'package:sigser_front/navigation/client/pending_payment_devices.dart';
 import 'package:sigser_front/navigation/client/profile.dart';
 
+
 class NavigationClient extends StatefulWidget {
   const NavigationClient({super.key});
 
@@ -27,7 +28,6 @@ class _NavigationClientState extends State<NavigationClient> {
       _selectedIndex = index;
     });
   }
-
 
 
 
