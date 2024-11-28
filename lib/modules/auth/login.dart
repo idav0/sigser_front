@@ -14,12 +14,16 @@ class Login extends StatefulWidget {
 }
 
 void saveData(data) async {
-
-
   final prefs = await SharedPreferences.getInstance();
+
+  var userInfo = data['data']['userInfo'];
+  var authority =userInfo['authorities'][0]['authority'];
+  var userId = data['data']['userInfo']['id'];
+  var token = data['data']['loginInfo']['token'];
+
   await prefs.setString('token', data.loginInfo.token);
   await prefs.setInt('id', data.userInfo.id);
-  await prefs.setInt('rol', data.authorities.aythority);
+  await prefs.setInt('rol', authority);
 }
 
 void showCorrectDialog(BuildContext context) {
@@ -30,7 +34,12 @@ void showCorrectDialog(BuildContext context) {
     title: "Correcto",
     desc: "Las credenciales son correctas",
   ).show();
+
+  Future.delayed(Duration(seconds: 2), () {
+    Navigator.pushNamed(context, '/menuClient'); // Navegar después del retraso
+  });
 }
+
 
 void showIncorrectDialog(BuildContext context) {
   AwesomeDialog(
@@ -43,7 +52,7 @@ void showIncorrectDialog(BuildContext context) {
 }
 
 class _LoginState extends State<Login> {
-  final Dio _dio = Dio(BaseOptions(baseUrl:'${dotenv.env['BASE_URL']}'));
+  final Dio _dio = Dio(BaseOptions(baseUrl: '${dotenv.env['BASE_URL']}'));
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -94,15 +103,15 @@ class _LoginState extends State<Login> {
               children: [
                 CircleAvatar(
                   radius: 110,
-                  backgroundColor:  Color.fromARGB(255, 17, 24, 39),
+                  backgroundColor: Color.fromARGB(255, 17, 24, 39),
                 ),
                 CircleAvatar(
                   radius: 90, // Más pequeño
-              	  backgroundColor: Color.fromARGB(255, 23, 37, 84),
+                  backgroundColor: Color.fromARGB(255, 23, 37, 84),
                 ),
                 CircleAvatar(
                   radius: 70, // Más pequeño aún
-                  backgroundColor:Color.fromARGB(255, 30, 64, 175),
+                  backgroundColor: Color.fromARGB(255, 30, 64, 175),
                 ),
               ],
             ),
@@ -115,20 +124,20 @@ class _LoginState extends State<Login> {
               children: [
                 CircleAvatar(
                   radius: 110,
-                  backgroundColor:  Color.fromARGB(255, 17, 24, 39),
+                  backgroundColor: Color.fromARGB(255, 17, 24, 39),
                 ),
                 CircleAvatar(
                   radius: 90, // Más pequeño
-              	  backgroundColor: Color.fromARGB(255, 23, 37, 84),
+                  backgroundColor: Color.fromARGB(255, 23, 37, 84),
                 ),
                 CircleAvatar(
                   radius: 70, // Más pequeño aún
-                  backgroundColor:Color.fromARGB(255, 30, 64, 175),
+                  backgroundColor: Color.fromARGB(255, 30, 64, 175),
                 ),
               ],
             ),
           ),
-          
+
           // Formulario de inicio de sesión
           Center(
             child: Padding(
@@ -167,61 +176,75 @@ class _LoginState extends State<Login> {
                       width: double.infinity, // Ocupa todo el ancho disponible
                       child: ElevatedButton(
                         onPressed: () async {
-                          if (_formKey.currentState!.validate()) {
-                            try {
-                              var dataUser = {
-                                  'username': _emailController.text, // Reemplaza con el nombre de usuario
-                                  'password': _passwordController.text // Reemplaza con la contraseña
-                                };
-                              final response = await _dio.post(
-                                '/auth/login',
-                                data: dataUser
-                                );
-                              print(response);
-                              if (response.data.status == 403) {
-                                Navigator.pushNamed(context, '/changePassword');
-                              } else if (response.data.status == 200) {
-                                if (response.data.data.userInfo.authorities.authority == "TECNICO") {
-                                  showCorrectDialog(context);
-                                  saveData(response.data);
-                                  Navigator.pushNamed(context, '/menuTechnician');
-                                } else if (response.data.data.userInfo.authorities.authority == "USUARIO") {
-                                  Navigator.pushNamed(context, '/menuClient');
-                                  saveData(response.data);
-                                  showCorrectDialog(context);
-                                } else {
-                                  AwesomeDialog(
-                                    context: context,
-                                    dialogType: DialogType.info,
-                                    animType: AnimType.bottomSlide,
-                                    title: "INFO",
-                                    desc: "Este tipo de usuario no está disponible para esta plataforma",
-                                  ).show();
-                                }
-                                showIncorrectDialog(context);
+                          try {
+                            var dataUser = {
+                              'email': _emailController.text,
+                              'password': _passwordController.text,
+                            };
+
+                            final response = await _dio.post(
+                              '/auth/login',
+                              data: dataUser,
+                            );
+
+                            print(response.data);
+
+                            if (response.statusCode == 403) {
+                              Navigator.pushNamed(context, '/changePassword');
+                            } else if (response.statusCode == 200) {
+                              var userInfo = response.data['data']['userInfo'];
+                              var authority =userInfo['authorities'][0]['authority'];
+                              if (authority == "TECHNICIAN") {
+                                Navigator.pushNamed(context, '/menuTechnician');
+                                showCorrectDialog(context);
+                                saveData(response.data);
+                              } else if (authority == "CLIENT") {
+                                Navigator.pushNamed(context, '/menuClient'); 
+                                showCorrectDialog(context);
+                                saveData(response.data);
+                              } else {
+                                AwesomeDialog(
+                                  context: context,
+                                  dialogType: DialogType.info,
+                                  animType: AnimType.bottomSlide,
+                                  title: "INFO",
+                                  desc:
+                                      "Este tipo de usuario no está disponible para esta plataforma",
+                                ).show();
                               }
-                            } catch (e) {
+                            } else {
                               AwesomeDialog(
                                 context: context,
-                                dialogType: DialogType.error,
+                                dialogType: DialogType.info,
                                 animType: AnimType.bottomSlide,
-                                title: "ERROR",
-                                desc: "Error al realizar la petición",
+                                title: "INFO",
+                                desc: 'Error en la peticion Status: ${response.statusCode}',
                               ).show();
                             }
+                          } catch (e) {
+                            print(e.toString());
+                            AwesomeDialog(
+                              context: context,
+                              dialogType: DialogType.error,
+                              animType: AnimType.bottomSlide,
+                              title: "ERROR",
+                              desc: e.toString(),
+                            ).show();
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(255, 17, 24, 39), 
-                          foregroundColor: Colors.white,
+                          backgroundColor: const Color.fromARGB(
+                              255, 17, 24, 39), // Color de fondo
+                          foregroundColor: Colors.white, // Texto blanco
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          minimumSize: const Size(double.infinity, 56), 
+                          minimumSize: const Size(
+                              double.infinity, 56), // Más largo y alto
                         ),
                         child: const Text(
                           'Iniciar sesión',
-                          style: TextStyle(fontSize: 18), 
+                          style: TextStyle(fontSize: 18), // Tamaño del texto
                         ),
                       ),
                     ),
@@ -229,7 +252,8 @@ class _LoginState extends State<Login> {
                       height: 8,
                     ),
                     InkWell(
-                      onTap: () => Navigator.pushNamed(context, '/forgotPassword'),
+                      onTap: () =>
+                          Navigator.pushNamed(context, '/forgotPassword'),
                       child: const Text(
                         'Olvide mi contraseña',
                         style: TextStyle(
