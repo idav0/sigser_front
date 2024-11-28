@@ -17,14 +17,15 @@ void saveData(data) async {
   final prefs = await SharedPreferences.getInstance();
 
   var userInfo = data['data']['userInfo'];
-  var authority =userInfo['authorities'][0]['authority'];
-  var userId = data['data']['userInfo']['id'];
+  var authority = userInfo['authorities'][0]['authority'];
+  var userId = userInfo['id'];
   var token = data['data']['loginInfo']['token'];
 
-  await prefs.setString('token', data.loginInfo.token);
-  await prefs.setInt('id', data.userInfo.id);
-  await prefs.setInt('rol', authority);
+  await prefs.setString('token', token); // Guarda correctamente el token
+  await prefs.setInt('id', userId); // Guarda el ID del usuario
+  await prefs.setString('rol', authority); // Guarda el rol como String
 }
+
 
 void showCorrectDialog(BuildContext context) {
   AwesomeDialog(
