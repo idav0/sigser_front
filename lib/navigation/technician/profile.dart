@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Importa SharedPreferences
 import 'package:sigser_front/modules/kernel/widgets/custom_text_field_password.dart';
 
 class Profile extends StatefulWidget {
@@ -196,8 +197,16 @@ class _ProfileState extends State<Profile> {
                           child: const Text('Cancelar'),
                         ),
                         TextButton(
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/login');
+                          onPressed: () async {
+                            // Aquí se limpia la información de sesión
+                            SharedPreferences prefs =
+                                await SharedPreferences.getInstance();
+                            await prefs.remove('name'); // Elimina el nombre
+                            await prefs.remove('email'); // Elimina el correo
+                            await prefs.remove('phone'); // Elimina el teléfono
+
+                            // Navega a la pantalla de inicio de sesión
+                            Navigator.pushNamed(context, '/login'); // Asegúrate de tener configurada la ruta '/login'
                           },
                           child: const Text('Aceptar'),
                         ),

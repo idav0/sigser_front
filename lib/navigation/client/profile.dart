@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sigser_front/modules/kernel/widgets/custom_text_field_password.dart';
 
 class Profile extends StatefulWidget {
@@ -14,6 +15,29 @@ class _ProfileState extends State<Profile> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  // Variables para almacenar los datos del usuario
+  String name = '';
+  String lastname = '';
+  String email = '';
+  String phone = '';
+
+  // Recupera los datos desde SharedPreferences
+  Future<void> loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      name = prefs.getString('name') ?? 'Sin Nombre';
+      lastname =prefs.getString('lastname') ?? 'Sin Apellido'; // Agregar lastName
+      email = prefs.getString('email') ?? 'Sin Correo';
+      phone = prefs.getString('phone') ?? 'Sin Teléfono';
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadUserData(); // Carga los datos al iniciar el widget
+  }
 
   String? validatePassword(String? value) {
     if (value == null || value.isEmpty) {
@@ -79,33 +103,34 @@ class _ProfileState extends State<Profile> {
                 ),
               ),
               const SizedBox(height: 17),
-              const Text(
-                'Juan Pérez',
-                style: TextStyle(
+              Text(
+                '$name $lastname', // Mostrar nombre y apellido
+                style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const Text(
-                'juan.perez@email.com',
-                style: TextStyle(
+              Text(
+                email,
+                style: const TextStyle(
                   fontSize: 14,
                   color: Colors.grey,
                 ),
               ),
-              const Text(
-                '555-1234-5678',
-                style: TextStyle(
+              Text(
+                phone,
+                style: const TextStyle(
                   fontSize: 14,
                   color: Colors.grey,
                 ),
               ),
+
               const SizedBox(height: 25),
               const Divider(
                 color: Colors.grey,
                 thickness: 1,
               ),
-              const SizedBox(height: 17),
+              // Botón de cambiar contraseña
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.white,
@@ -149,10 +174,9 @@ class _ProfileState extends State<Profile> {
                             onPressed: () {
                               if (_formKey.currentState?.validate() ?? false) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          'Contraseña cambiada con éxito')),
-                                );
+                                    const SnackBar(
+                                        content: Text(
+                                            'Contraseña cambiada con éxito')));
                                 Navigator.of(context).pop();
                               }
                             },
@@ -196,8 +220,19 @@ class _ProfileState extends State<Profile> {
                           child: const Text('Cancelar'),
                         ),
                         TextButton(
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/login');
+                          onPressed: () async {
+                            // Aquí se limpia la información de sesión
+                            SharedPreferences prefs =
+                                await SharedPreferences.getInstance();
+                            await prefs.remove('name'); // Elimina el nombre
+                            await prefs
+                                .remove('lastName'); // Elimina el apellido
+                            await prefs.remove('email'); // Elimina el correo
+                            await prefs.remove('phone'); // Elimina el teléfono
+
+                            // Navega a la pantalla de inicio de sesión
+                            Navigator.pushNamed(context,
+                                '/login'); // Asegúrate de tener configurada la ruta '/login'
                           },
                           child: const Text('Aceptar'),
                         ),
