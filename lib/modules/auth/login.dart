@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,17 +15,24 @@ class Login extends StatefulWidget {
   State<Login> createState() => _LoginState();
 }
 
-void saveData(data) async {
+void saveData(data,devices) async {
   final prefs = await SharedPreferences.getInstance();
 
   var userInfo = data['data']['userInfo'];
   var authority = userInfo['authorities'][0]['authority'];
   var userId = userInfo['id'];
   var token = data['data']['loginInfo']['token'];
+  var ListDevices = jsonEncode(devices['data']); 
 
+  await prefs.setString('listDevices', ListDevices); 
   await prefs.setString('token', token); // Guarda correctamente el token
   await prefs.setInt('id', userId); // Guarda el ID del usuario
   await prefs.setString('rol', authority); // Guarda el rol como String
+
+  String? listDevicesString = prefs.getString('listDevices');
+  print('Lista de dispositivoa');
+  print(listDevicesString);
+ 
 }
 
 
@@ -36,9 +45,6 @@ void showCorrectDialog(BuildContext context) {
     desc: "Las credenciales son correctas",
   ).show();
 
-  Future.delayed(Duration(seconds: 2), () {
-    Navigator.pushNamed(context, '/menuClient'); // Navegar después del retraso
-  });
 }
 
 
@@ -77,16 +83,16 @@ class _LoginState extends State<Login> {
 
   String? validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Por favor, ingrese una nueva contraseña';
+      return 'Por favor, ingrese la contraseña';
     }
     // Expresión regular para validar la contraseña
-    final RegExp passwordRegExp = RegExp(
-      r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[A-Z])(?=.*[!@#\$%^&*(),.?":|])[A-Za-z\d!@#\$%^&*(),.?":|]{8,}$',
-    );
+    // final RegExp passwordRegExp = RegExp(
+    //   r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[A-Z])(?=.*[!@#\$%^&*(),.?":|])[A-Za-z\d!@#\$%^&*(),.?":|]{8,}$',
+    // );
 
-    if (!passwordRegExp.hasMatch(value)) {
-      return 'Contraseña incorrecta';
-    }
+    // if (!passwordRegExp.hasMatch(value)) {
+    //   return 'Contraseña incorrecta';
+    // }
     return null;
   }
 
@@ -177,7 +183,8 @@ class _LoginState extends State<Login> {
                       width: double.infinity, // Ocupa todo el ancho disponible
                       child: ElevatedButton(
                         onPressed: () async {
-                          try {
+                          if(_formKey.currentState!.validate()){
+                              try {
                             var dataUser = {
                               'email': _emailController.text,
                               'password': _passwordController.text,
@@ -195,14 +202,33 @@ class _LoginState extends State<Login> {
                             } else if (response.statusCode == 200) {
                               var userInfo = response.data['data']['userInfo'];
                               var authority =userInfo['authorities'][0]['authority'];
+                              var id = userInfo['id'];
+                               var token =response.data['data']['loginInfo']['token'];
+
                               if (authority == "TECHNICIAN") {
-                                Navigator.pushNamed(context, '/menuTechnician');
-                                showCorrectDialog(context);
-                                saveData(response.data);
+                                 Navigator.pushNamed(context, '/menuTechnician');
+                                 showCorrectDialog(context);
+                                final devices = await _dio.get(
+                                  '/repair/technician/${id}',
+                                  options: Options(
+                                    headers: {
+                                      'Authorization': 'Bearer ${token}', 
+                                    },
+                                ),
+                              );
+                                saveData(response.data, devices.data);
                               } else if (authority == "CLIENT") {
                                 Navigator.pushNamed(context, '/menuClient'); 
                                 showCorrectDialog(context);
-                                saveData(response.data);
+                                final devices = await _dio.get(
+                                  '/repair/client/${id}',
+                                  options: Options(
+                                    headers: {
+                                      'Authorization': 'Bearer ${token}', // Reemplaza 'your_token_here' con tu token
+                                    },
+                                ),
+                              );
+                                saveData(response.data,devices.data);
                               } else {
                                 AwesomeDialog(
                                   context: context,
@@ -232,6 +258,8 @@ class _LoginState extends State<Login> {
                               desc: e.toString(),
                             ).show();
                           }
+                          }
+                          
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color.fromARGB(
