@@ -1,50 +1,66 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DevicesClient extends StatefulWidget {
   const DevicesClient({Key? key}) : super(key: key);
+  
 
   @override
   State<DevicesClient> createState() => _DevicesClientState();
 }
 
 class _DevicesClientState extends State<DevicesClient> {
-  List<Map<String, String>> devices = [
-    {
-      'id': '001',
-      'tipo': 'Celular',
-      'modelo': 'iPhone 14',
-      'marca': 'Apple',
-      'serie': 'SN12345',
-      'problema': 'No enciende',
-      'cliente': 'Juan Pérez',
-      'fecha': '2024-11-20',
-      'estado': 'Diagnóstico',
-    },
-    {
-      'id': '002',
-      'tipo': 'Computadora',
-      'modelo': 'Laptop Pro X',
-      'marca': 'TechBrand',
-      'serie': 'SN98765',
-      'problema': 'Pantalla dañada',
-      'cliente': 'Ana López',
-      'fecha': '2024-11-22',
-      'estado': 'Cotización',
-    },
-    {
-      'id': '003',
-      'tipo': 'Monitor',
-      'modelo': 'Monitor 4K',
-      'marca': 'DisplayCorp',
-      'serie': 'SN112233',
-      'problema': 'Sin señal',
-      'cliente': 'Carlos Méndez',
-      'fecha': '2024-11-25',
-      'estado': 'En reparación',
-    },
-  ];
+  List<Map<String, dynamic>> devices = [];
+@override
+  void initState() {
+    super.initState();
+    _loadDevicesFromPreferences();
+  }
+Future<void> _loadDevicesFromPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? devicesJson = prefs.getString('listDevices');
+    print(devicesJson);
+  
 
-  void _showCotizacionModal(BuildContext context, Map<String, String> device) {
+    if (devicesJson != null) {
+      try {
+        List<dynamic> jsonList = jsonDecode(devicesJson);
+
+        List<Map<String, dynamic>> adaptedDevices = jsonList.map((device) {
+          return {
+            'id': device['id'].toString(),
+            'tipo': device['device']['deviceType']['name'].toString(),
+            'modelo': device['device']['model'].toString(),
+            'marca': device['device']['brand'].toString(),
+            'serie': device['device']['serialNumber'].toString(),
+            'problema': device['problem_description'].toString(),
+            'cliente': device['cliente'] ?? 'Desconocido',
+            'fecha': device['entry_date'].toString(),
+            'diagnostico':
+                (device['diagnostic_observations'] ?? 'N/A').toString(),
+            'estado': device['repairStatus']['name'].toString(),
+          };
+        }).toList();
+
+        setState(() {
+          devices.addAll(adaptedDevices);
+        });
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cargar dispositivos: $e')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se encontraron dispositivos guardados.')),
+      );
+    }
+  }
+
+
+  void _showCotizacionModal(BuildContext context, Map<String, dynamic> device) {
     showDialog(
       context: context,
       builder: (context) {
