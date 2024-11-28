@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sigser_front/navigation/technician/devices.dart';
 import 'package:sigser_front/navigation/technician/history.dart';
-import 'package:sigser_front/navigation/technician/profile.dart';
 import 'package:sigser_front/navigation/technician/qr_scan.dart';
+import 'package:sigser_front/navigation/technician/technician_profile.dart';
 
 class NavigationTechnician extends StatefulWidget {
   const NavigationTechnician({super.key});
@@ -20,7 +20,7 @@ class _NavigationTechnicianState extends State<NavigationTechnician> {
    QrScan(),
    Devices(),
    History(),
-   Profile()
+   TechnicianProfile()
   ];
 
   void _onItemTapped(int index) {

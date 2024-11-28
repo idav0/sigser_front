@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class RepairFormScreen extends StatefulWidget {
   final int repairId;
@@ -16,10 +17,7 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
   final _technicianObservationsController = TextEditingController();
   final _estimatedCostController = TextEditingController();
   final List<TextEditingController> _partsControllers = [];
-  List<String> images = [];
-
   final Dio _dio = Dio();
-
   final RegExp _validInputRegex = RegExp(r'^[a-zA-Z0-9\s]+$');
 
   @override
@@ -56,51 +54,49 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
     });
   }
 
-  void _addImage() {
-    setState(() {
-      images.add("assets/logo.png"); // Ejemplo de imagen placeholder
-    });
-  }
-
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      final observations = _technicianObservationsController.text;
-      final parts = _partsControllers.map((controller) => controller.text).toList();
-      final estimatedCost = double.parse(_estimatedCostController.text);
+      final String diagnosticObservations = _technicianObservationsController.text;
+      final double diagnosticEstimatedCost = double.parse(_estimatedCostController.text);
+      final List<String> diagnosticParts = _partsControllers.map((controller) => controller.text).toList();
 
+      // Mostrar SnackBar para progreso
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enviando formulario...')),
       );
 
-      final url = 'http://<tu-servidor>/api-sigser/repair/status/start-diagnostic/${widget.repairId}';
+      final String url =
+          '${dotenv.env['BASE_URL']}/repair/status/start-diagnostic/${widget.repairId}';
 
       try {
-        final response = await _dio.put(url, options: Options(headers: {
-          'Content-Type': 'application/json',
-        }));
+        final response = await _dio.put(
+          url,
+          options: Options(headers: {'Content-Type': 'application/json'}),
+        );
+
+        // Imprimir respuesta en consola
+        debugPrint('Respuesta del servidor: ${response.data}');
 
         if (response.statusCode == 200) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Estado actualizado a DIAGNOSIS.')),
           );
-
-          debugPrint('Observaciones del técnico: $observations');
-          debugPrint('Piezas necesarias: $parts');
-          debugPrint('Cotización Aproximada: $estimatedCost');
-          debugPrint('Evidencia: $images');
+          Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al actualizar el estado: ${response.data}')),
+            SnackBar(content: Text('Error al actualizar: ${response.data}')),
           );
         }
       } on DioError catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error de conexión: ${e.response?.data ?? e.message}')),
         );
+        debugPrint('Error en la petición: ${e.response?.data ?? e.message}');
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error inesperado: $e')),
         );
+        debugPrint('Error inesperado: $e');
       }
     }
   }
@@ -110,7 +106,7 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Formulario de Reparación',
+          'Formulario de Diagnóstico',
           style: TextStyle(
               fontWeight: FontWeight.bold, fontSize: 19, color: Colors.white),
         ),
@@ -134,25 +130,21 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
                 maxLines: 3,
               ),
               const SizedBox(height: 16),
-              _buildSectionTitle('Evidencia (Imágenes)'),
-              const SizedBox(height: 8),
-              _buildImageUploadSection(),
-              const SizedBox(height: 16),
-              _buildSectionTitle('¿Desea agregar una pieza?'),
+              _buildSectionTitle('¿Desea agregar piezas necesarias?'),
               const SizedBox(height: 8),
               _buildAddPartButtons(),
               const SizedBox(height: 16),
               _buildPartsSection(),
               const SizedBox(height: 16),
-              _buildSectionTitle('Cotización Aproximada'),
+              _buildSectionTitle('Costo Estimado de Diagnóstico'),
               const SizedBox(height: 8),
               _buildTextField(
                 controller: _estimatedCostController,
-                hintText: 'Ingrese el monto aproximado (\$)...',
+                hintText: 'Ingrese el costo estimado (\$)...',
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Por favor, ingrese la cotización aproximada.';
+                    return 'Por favor, ingrese el costo estimado.';
                   }
                   final cost = double.tryParse(value);
                   if (cost == null || cost < 0) {
@@ -174,7 +166,7 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: const Text('Enviar Formulario',
+                  child: const Text('Enviar Diagnóstico',
                       style: TextStyle(fontSize: 16)),
                 ),
               ),
@@ -260,59 +252,6 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
             foregroundColor: Colors.white,
           ),
           child: const Text('Cancelar'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildImageUploadSection() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (var image in images)
-          Stack(
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage(image),
-                    fit: BoxFit.cover,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              Positioned(
-                top: 4,
-                right: 4,
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      images.remove(image);
-                    });
-                  },
-                  child: const CircleAvatar(
-                    radius: 12,
-                    backgroundColor: Colors.red,
-                    child: Icon(Icons.close, size: 16, color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        GestureDetector(
-          onTap: _addImage,
-          child: Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.add_a_photo, size: 40),
-          ),
         ),
       ],
     );
