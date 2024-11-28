@@ -58,7 +58,14 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
     if (_formKey.currentState!.validate()) {
       final String diagnosticObservations = _technicianObservationsController.text;
       final double diagnosticEstimatedCost = double.parse(_estimatedCostController.text);
-      final List<String> diagnosticParts = _partsControllers.map((controller) => controller.text).toList();
+      final String diagnosticParts = _partsControllers.map((controller) => controller.text).join(', ');
+
+      final Map<String, dynamic> requestData = {
+        "id": widget.repairId,
+        "diagnostic_observations": diagnosticObservations,
+        "diagnostic_parts": diagnosticParts,
+        "diagnostic_estimated_cost": diagnosticEstimatedCost,
+      };
 
       // Mostrar SnackBar para progreso
       ScaffoldMessenger.of(context).showSnackBar(
@@ -66,25 +73,25 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
       );
 
       final String url =
-          '${dotenv.env['BASE_URL']}/repair/status/start-diagnostic/${widget.repairId}';
+          '${dotenv.env['BASE_URL']}/repair/status/end-diagnostic';
 
       try {
         final response = await _dio.put(
           url,
+          data: jsonEncode(requestData),
           options: Options(headers: {'Content-Type': 'application/json'}),
         );
 
-        // Imprimir respuesta en consola
         debugPrint('Respuesta del servidor: ${response.data}');
 
         if (response.statusCode == 200) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Estado actualizado a DIAGNOSIS.')),
+            const SnackBar(content: Text('Diagnóstico enviado con éxito.')),
           );
           Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al actualizar: ${response.data}')),
+            SnackBar(content: Text('Error al enviar diagnóstico: ${response.data}')),
           );
         }
       } on DioError catch (e) {
@@ -246,7 +253,9 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
         ),
         const SizedBox(width: 16),
         ElevatedButton(
-          onPressed: () {},
+          onPressed: () {
+            Navigator.pop(context);
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFFF87171),
             foregroundColor: Colors.white,
