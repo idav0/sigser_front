@@ -54,52 +54,58 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
     });
   }
 
-  Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      final String diagnosticObservations = _technicianObservationsController.text;
-      final double diagnosticEstimatedCost = double.parse(_estimatedCostController.text);
-      final List<String> diagnosticParts = _partsControllers.map((controller) => controller.text).toList();
+Future<void> _submitForm() async {
+  if (_formKey.currentState!.validate()) {
+    final String diagnosticObservations = _technicianObservationsController.text;
+    final double diagnosticEstimatedCost = double.parse(_estimatedCostController.text);
+    final String diagnosticParts = _partsControllers.map((controller) => controller.text).join(', ');
 
-      // Mostrar SnackBar para progreso
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enviando formulario...')),
+    final Map<String, dynamic> requestData = {
+      "id": widget.repairId,
+      "diagnostic_observations": diagnosticObservations,
+      "diagnostic_parts": diagnosticParts,
+      "diagnostic_estimated_cost": diagnosticEstimatedCost,
+    };
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Enviando formulario...')),
+    );
+
+    final String url =
+        '${dotenv.env['BASE_URL']}/repair/status/end-diagnostic';
+
+    try {
+      final response = await _dio.put(
+        url,
+        data: jsonEncode(requestData),
+        options: Options(headers: {'Content-Type': 'application/json'}),
       );
 
-      final String url =
-          '${dotenv.env['BASE_URL']}/repair/status/start-diagnostic/${widget.repairId}';
+      debugPrint('Respuesta del servidor: ${response.data}');
 
-      try {
-        final response = await _dio.put(
-          url,
-          options: Options(headers: {'Content-Type': 'application/json'}),
-        );
-
-        // Imprimir respuesta en consola
-        debugPrint('Respuesta del servidor: ${response.data}');
-
-        if (response.statusCode == 200) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Estado actualizado a DIAGNOSIS.')),
-          );
-          Navigator.pop(context);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al actualizar: ${response.data}')),
-          );
-        }
-      } on DioError catch (e) {
+      if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error de conexión: ${e.response?.data ?? e.message}')),
+          const SnackBar(content: Text('Diagnóstico enviado con éxito.')),
         );
-        debugPrint('Error en la petición: ${e.response?.data ?? e.message}');
-      } catch (e) {
+        Navigator.pop(context);
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error inesperado: $e')),
+          SnackBar(content: Text('Error al enviar diagnóstico: ${response.data}')),
         );
-        debugPrint('Error inesperado: $e');
       }
+    } on DioError catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error de conexión: ${e.response?.data ?? e.message}')),
+      );
+      debugPrint('Error en la petición: ${e.response?.data ?? e.message}');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error inesperado: $e')),
+      );
+      debugPrint('Error inesperado: $e');
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -246,7 +252,9 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
         ),
         const SizedBox(width: 16),
         ElevatedButton(
-          onPressed: () {},
+          onPressed: () {
+            Navigator.pop(context);
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFFF87171),
             foregroundColor: Colors.white,

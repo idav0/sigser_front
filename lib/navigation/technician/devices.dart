@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sigser_front/modules/kernel/widgets/complete_repair_form_screen.dart';
 import 'package:sigser_front/modules/kernel/widgets/repair_form_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class Devices extends StatefulWidget {
   const Devices({Key? key}) : super(key: key);
@@ -53,103 +56,78 @@ class _DevicesState extends State<Devices> {
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se encontraron dispositivos guardados.')),
+        const SnackBar(
+            content: Text('No se encontraron dispositivos guardados.')),
       );
     }
   }
 
-  void _showDiagnosticModal(BuildContext context, Map<String, dynamic> device) {
-    String? buttonText;
-    VoidCallback? buttonAction;
+ Future<void> _startDiagnostic(String repairId) async {
+    final String url =
+        '${dotenv.env['BASE_URL']}/repair/status/start-diagnostic/$repairId';
 
-    switch (device['estado']) {
-      case 'RECEIVED':
-        buttonText = 'Iniciar Diagnóstico';
-        buttonAction = () {
-          Navigator.of(context).pop();
-          _openRepairForm(device);
-        };
-        break;
-      case 'DIAGNOSIS':
-        buttonText = 'Generar Cotización';
-        buttonAction = () {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Generando cotización...')),
-          );
-        };
-        break;
-      case 'QUOTATION':
-        buttonText = 'Aprobar Cotización';
-        buttonAction = () {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Aprobando cotización...')),
-          );
-        };
-        break;
-      default:
-        buttonText = null;
-        buttonAction = null;
-    }
+    try {
+      final response = await http.put(Uri.parse(url));
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text(
-            'Detalles de Reparación',
-            style: TextStyle(color: Color(0xff172554)),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: device.keys.map((key) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$key:',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
-                    ),
-                    Text(device[key].toString()),
-                    const SizedBox(height: 8),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
-          actions: [
-            if (buttonText != null)
-              ElevatedButton(
-                onPressed: buttonAction,
-                child: Text(buttonText),
-              ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cerrar'),
-            ),
-          ],
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Diagnóstico iniciado correctamente')),
         );
-      },
-    );
+        setState(() {
+          devices.removeWhere((device) => device['id'] == repairId);
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error al iniciar diagnóstico: ${response.statusCode}',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al conectar con el servidor: $e')),
+      );
+    }
   }
 
-  void _openRepairForm(Map<String, dynamic> device) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RepairFormScreen(
-          repairId: int.parse(device['id']),
+ Future<void> _startRepair(String repairId) async {
+  final String url =
+      '${dotenv.env['BASE_URL']}/repair/status/start-repair/$repairId';
+
+  try {
+    final response = await http.put(Uri.parse(url));
+
+    // Imprimir el response completo en consola
+    debugPrint('Response status: ${response.statusCode}');
+    debugPrint('Response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Reparación iniciada correctamente.')),
+      );
+      setState(() {
+        devices.removeWhere((device) => device['id'] == repairId);
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error al iniciar reparación: ${response.statusCode}',
+          ),
         ),
-      ),
+      );
+    }
+  } catch (e) {
+    // Imprimir error en consola
+    debugPrint('Error en la solicitud: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error al conectar con el servidor: $e')),
     );
   }
+}
+
 
   IconData _getDeviceIcon(String tipo) {
     switch (tipo) {
@@ -212,6 +190,142 @@ class _DevicesState extends State<Devices> {
     }
   }
 
+//AREA TRABAJO AARON ----------------------------------------------------------------------
+  void _showDiagnosticModal(BuildContext context, Map<String, dynamic> device) {
+    String? buttonText;
+    VoidCallback? buttonAction;
+
+    switch (device['estado']) {
+      case 'RECEIVED':
+        buttonText = 'Iniciar Diagnóstico';
+        buttonAction = () {
+          Navigator.of(context).pop();
+          _startDiagnostic(device['id']);
+        };
+        break;
+
+        //Abre pantalla
+      case 'DIAGNOSIS':
+        buttonText = 'Crear Reporte';
+        buttonAction = () {
+          Navigator.of(context).pop();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RepairFormScreen(
+                repairId: int.parse(device['id']),
+              ),
+            ),
+          );
+        };
+        break;
+
+      case 'QUOTATION':
+        buttonText = 'Producto Cotizado';
+        buttonAction = () {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Aprobando cotización...')),
+          );
+        };
+        break;
+      case 'WAITING_FOR_CUSTOMER_APPROVAL':
+        buttonText = 'Aprobando cotización...';
+        buttonAction = () {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Aprobando cotización...')),
+          );
+        };
+        break;
+      case 'WAITING_FOR_PARTS':
+        buttonText = 'Piezas Listas';
+        buttonAction = () {
+          Navigator.of(context).pop();
+          _startRepair(
+              device['id']); 
+        };
+        break;
+
+        //Abre Pantalla
+      case 'REPAIRING':
+        buttonText = 'Terminar';
+         buttonAction = () {
+          Navigator.of(context).pop();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CompleteRepairFormScreen(
+                repairId: int.parse(device['id']),
+              ),
+            ),
+          );
+        };
+        break;
+      case 'READY_FOR_COLLECTION':
+        buttonText = 'Aprobando cotización...';
+        buttonAction = () {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Aprobando cotización...')),
+          );
+        };
+        break;
+      default:
+        buttonText = null;
+        buttonAction = null;
+    }
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text(
+            'Detalles de Reparación',
+            style: TextStyle(color: Color(0xff172554)),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: device.keys.map((key) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$key:',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    Text(device[key].toString()),
+                    const SizedBox(height: 8),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+          actions: [
+            if (buttonText != null)
+              ElevatedButton(
+                onPressed: buttonAction,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue, // Blue button
+                  foregroundColor: Colors.white, // White text
+                ),
+                child: Text(buttonText),
+              ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -227,8 +341,8 @@ class _DevicesState extends State<Devices> {
                 return GestureDetector(
                   onTap: () => _showDiagnosticModal(context, device),
                   child: Card(
-                    margin: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     elevation: 4,
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),

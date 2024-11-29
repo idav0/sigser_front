@@ -57,7 +57,7 @@ void showCorrectDialog(BuildContext context, String authority) {
           context, '/menuTechnician'); // Navegar al menú de técnicos
     } else {
       Navigator.pushNamed(
-          context, '/menuClient'); // Navegar al menú de clientes
+          context, '/menuClient'); // Navegar al menú de clientes 
     }
   });
 }
