@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dio/dio.dart';
-
+import 'package:awesome_dialog/awesome_dialog.dart';
 class PendingPaymentDevices extends StatefulWidget {
   const PendingPaymentDevices({super.key});
 
@@ -16,8 +16,66 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
   final Dio _dio = Dio(BaseOptions(baseUrl: '${dotenv.env['BASE_URL']}'));
  List<Map<String, dynamic>> devices = [];
 
-  void _navigateToPayment(BuildContext context) {
-    Navigator.pushNamed(context, '/menuClient');
+  void _navigateToPayment(BuildContext context, device) {
+    print('id:');
+    print(device['id']);
+    AwesomeDialog(
+            context: context,
+            dialogType: DialogType.info,
+            animType: AnimType.rightSlide,
+            title: 'Accion a realizar',
+            desc: '¿Deseas pagar en este momento tu reparacion?',
+            btnCancelOnPress: ()  {
+              AwesomeDialog(
+                context: context,
+                dialogType: DialogType.error,
+                animType: AnimType.rightSlide,
+                 title: 'Operación Cancelada',
+              ).show();
+            },
+            btnOkOnPress: () async{
+              final prefs = await SharedPreferences.getInstance();
+              String? token = prefs.getString('token'); 
+      
+              try {
+                final response = await _dio.put('/repair/status/paid/${device['id']}',
+                options: Options(
+                headers: {
+                  'Authorization': 'Bearer ${token}', 
+                    },
+                  ),
+                );
+                if (response.statusCode==200) {
+                   AwesomeDialog(
+                      context: context,
+                      dialogType: DialogType.success,
+                      animType: AnimType.rightSlide,
+                      title: 'Operación Realizada con Exito',
+                    ).show();
+                    setState(() {
+                      device['pago'] = true;
+                    });
+                } else {
+                  AwesomeDialog(
+                      context: context,
+                      dialogType: DialogType.error,
+                      animType: AnimType.rightSlide,
+                      title: 'Operacion Cancelada',
+                    ).show();
+                }
+              } catch (e) {
+                AwesomeDialog(
+                      context: context,
+                      dialogType: DialogType.error,
+                      animType: AnimType.rightSlide,
+                      title: 'Operacion Cancelada',
+                      desc: e.toString()
+                    ).show();
+              }
+              
+            },
+            ).show();
+    
   }
 @override
   void initState() {
@@ -73,9 +131,8 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
   Widget build(BuildContext context) {
 
     final pendingPaymentDevices =
-        devices.where((device) => device['pago'] == false).toList();
-    print('Penditenes de pafo');
-    print(pendingPaymentDevices);
+        devices.where((device) => device['pago'] == false ).toList();
+  
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -92,7 +149,7 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
         itemBuilder: (context, index) {
           final device = pendingPaymentDevices[index];
           return GestureDetector(
-            onTap: () => _navigateToPayment(context),
+            onTap: () => _navigateToPayment(context, device),
             child: Card(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               elevation: 4,
@@ -108,12 +165,20 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
                     ),
                     const SizedBox(height: 16),
                     Text(
+                      '${device['marca']} ${device['modelo']}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
                       'Problema: ${device['problema']}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
+                    
                     const SizedBox(height: 8),
                     Text(
                       'Fecha de Ingreso: ${device['fecha']}',
