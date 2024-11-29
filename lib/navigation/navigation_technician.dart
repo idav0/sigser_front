@@ -12,15 +12,14 @@ class NavigationTechnician extends StatefulWidget {
 }
 
 class _NavigationTechnicianState extends State<NavigationTechnician> {
-
- int _selectedIndex = 0;
+  int _selectedIndex = 0;
   static const TextStyle optionStyle =
       TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
   static const List<Widget> _widgetOptions = <Widget>[
-   QrScan(),
-   Devices(),
-   History(),
-   TechnicianProfile()
+    QrScanScreen(),
+    Devices(),
+    History(),
+    TechnicianProfile()
   ];
 
   void _onItemTapped(int index) {
@@ -29,13 +28,9 @@ class _NavigationTechnicianState extends State<NavigationTechnician> {
     });
   }
 
-
-
-
-
   @override
   Widget build(BuildContext context) {
-      return Scaffold(
+    return Scaffold(
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
@@ -43,7 +38,7 @@ class _NavigationTechnicianState extends State<NavigationTechnician> {
             icon: Icon(Icons.qr_code_2),
             label: 'Escanear QR',
           ),
-           BottomNavigationBarItem(
+          BottomNavigationBarItem(
             icon: Icon(Icons.devices),
             label: 'Dispositivos',
           ),

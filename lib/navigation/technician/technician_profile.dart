@@ -224,12 +224,12 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
                             SharedPreferences prefs =
                                 await SharedPreferences.getInstance();
                             await prefs.remove('name'); // Elimina el nombre
-                            await prefs.remove('lastname'); 
+                            await prefs.remove('lastname');
                             await prefs.remove('email'); // Elimina el correo
                             await prefs.remove('phone'); // Elimina el teléfono
 
                             // Navega a la pantalla de inicio de sesión
-                            Navigator.pushNamed(context, '/login'); 
+                            Navigator.pushNamed(context, '/login');
                           },
                           child: const Text('Aceptar'),
                         ),
