@@ -1,4 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:dio/dio.dart';
 
 class PendingPaymentDevices extends StatefulWidget {
   const PendingPaymentDevices({super.key});
@@ -8,72 +13,69 @@ class PendingPaymentDevices extends StatefulWidget {
 }
 
 class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
-  final List<Map<String, dynamic>> devices = [
-    {
-      'id': 1,
-      'problem_description': 'No enciende',
-      'entry_date': '2024-11-20',
-      'devices_id': 101,
-      'devices_device_type_id': 1,
-      'client_id': 1001,
-      'technician_id': 2001,
-      'diagnostic_observations': 'El circuito de encendido está quemado.',
-      'diagnostic_parts': 'Placa madre',
-      'diagnostic_estimated_cost': 50.0,
-      'total_price': 100.0,
-      'repair_observations': 'Reemplazar circuito de encendido.',
-      'repair_start': '2024-11-22',
-      'repair_end': '2024-11-24',
-      'paid': 0,
-      'repair_statuses_id': 1,
-    },
-    {
-      'id': 2,
-      'problem_description': 'Pantalla dañada',
-      'entry_date': '2024-11-22',
-      'devices_id': 102,
-      'devices_device_type_id': 2,
-      'client_id': 1002,
-      'technician_id': 2002,
-      'diagnostic_observations': 'Panel LCD roto.',
-      'diagnostic_parts': 'Pantalla LCD',
-      'diagnostic_estimated_cost': 120.0,
-      'total_price': 250.0,
-      'repair_observations': 'Reemplazar pantalla.',
-      'repair_start': '2024-11-23',
-      'repair_end': '2024-11-25',
-      'paid': 0,
-      'repair_statuses_id': 2,
-    },
-    {
-      'id': 3,
-      'problem_description': 'Sin señal',
-      'entry_date': '2024-11-25',
-      'devices_id': 103,
-      'devices_device_type_id': 3,
-      'client_id': 1003,
-      'technician_id': 2003,
-      'diagnostic_observations': 'Cable HDMI dañado.',
-      'diagnostic_parts': 'Cable HDMI',
-      'diagnostic_estimated_cost': 20.0,
-      'total_price': 50.0,
-      'repair_observations': 'Reemplazar cable HDMI.',
-      'repair_start': '2024-11-26',
-      'repair_end': '2024-11-27',
-      'paid': 0,
-      'repair_statuses_id': 3,
-    },
-  ];
+  final Dio _dio = Dio(BaseOptions(baseUrl: '${dotenv.env['BASE_URL']}'));
+ List<Map<String, dynamic>> devices = [];
 
   void _navigateToPayment(BuildContext context) {
     Navigator.pushNamed(context, '/menuClient');
   }
+@override
+  void initState() {
+    super.initState();
+    _loadDevicesFromPreferences();
+  }
 
+  Future<void> _loadDevicesFromPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? devicesJson = prefs.getString('listDevices');
+  
+  
+
+    if (devicesJson != null) {
+      try {
+        List<dynamic> jsonList = jsonDecode(devicesJson);
+
+        List<Map<String, dynamic>> adaptedDevices = jsonList.map((device) {
+          return {
+            'id': device['id'].toString(),
+            'pago': device['paid'],
+            'tipo': device['device']['deviceType']['name'].toString(),
+             'tipoId': device['device']['deviceType']['id'].toString(),
+            'modelo': device['device']['model'].toString(),
+            'marca': device['device']['brand'].toString(),
+            'serie': device['device']['serialNumber'].toString(),
+            'problema': device['problem_description'].toString(),
+            'costoTotal': device['total_price'].toString(),
+            'cliente': device['cliente'] ?? 'Desconocido',
+            'fecha': device['entry_date'].toString(),
+            'diagnostico':
+                (device['diagnostic_observations'] ?? 'N/A').toString(),
+            'estado': device['repairStatus']['name'].toString(),
+            
+          };
+        }).toList();
+
+        setState(() {
+          devices.addAll(adaptedDevices);
+        });
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cargar dispositivos: $e')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se encontraron dispositivos guardados.')),
+      );
+    }
+  }
   @override
   Widget build(BuildContext context) {
-    final pendingPaymentDevices =
-        devices.where((device) => device['paid'] == 0).toList();
 
+    final pendingPaymentDevices =
+        devices.where((device) => device['pago'] == false).toList();
+    print('Penditenes de pafo');
+    print(pendingPaymentDevices);
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -100,13 +102,13 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Icon(
-                      _getDeviceIcon(device['devices_device_type_id']),
+                      _getDeviceIcon(int.parse(device['tipoId'])),
                       size: 50,
                       color: Colors.blueGrey,
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Problema: ${device['problem_description']}',
+                      'Problema: ${device['problema']}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -114,7 +116,7 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Fecha de Ingreso: ${device['repair_start']}',
+                      'Fecha de Ingreso: ${device['fecha']}',
                       style: const TextStyle(
                         fontSize: 14,
                         color: Colors.grey,
@@ -122,7 +124,7 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Costo Total: \$${device['total_price']}',
+                      'Costo Total: \$${device['costoTotal']}',
                       style: const TextStyle(
                         fontSize: 14,
                         color: Colors.green,
