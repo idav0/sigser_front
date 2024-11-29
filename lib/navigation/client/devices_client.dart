@@ -1,50 +1,155 @@
+import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
 
 class DevicesClient extends StatefulWidget {
   const DevicesClient({Key? key}) : super(key: key);
+  
 
   @override
   State<DevicesClient> createState() => _DevicesClientState();
 }
 
 class _DevicesClientState extends State<DevicesClient> {
-  List<Map<String, String>> devices = [
-    {
-      'id': '001',
-      'tipo': 'Celular',
-      'modelo': 'iPhone 14',
-      'marca': 'Apple',
-      'serie': 'SN12345',
-      'problema': 'No enciende',
-      'cliente': 'Juan Pérez',
-      'fecha': '2024-11-20',
-      'estado': 'Diagnóstico',
-    },
-    {
-      'id': '002',
-      'tipo': 'Computadora',
-      'modelo': 'Laptop Pro X',
-      'marca': 'TechBrand',
-      'serie': 'SN98765',
-      'problema': 'Pantalla dañada',
-      'cliente': 'Ana López',
-      'fecha': '2024-11-22',
-      'estado': 'Cotización',
-    },
-    {
-      'id': '003',
-      'tipo': 'Monitor',
-      'modelo': 'Monitor 4K',
-      'marca': 'DisplayCorp',
-      'serie': 'SN112233',
-      'problema': 'Sin señal',
-      'cliente': 'Carlos Méndez',
-      'fecha': '2024-11-25',
-      'estado': 'En reparación',
-    },
-  ];
+final Dio _dio = Dio(BaseOptions(baseUrl: '${dotenv.env['BASE_URL']}'));
 
-  void _showCotizacionModal(BuildContext context, Map<String, String> device) {
+  List<Map<String, dynamic>> devices = [];
+@override
+  void initState() {
+    super.initState();
+    _loadDevicesFromPreferences();
+  }
+
+Future<void> _SendRequest(request,id) async {
+  print('Entro');
+  final prefs = await SharedPreferences.getInstance();
+  String? token = prefs.getString('token'); 
+  int? idUser = prefs.getInt('id');
+
+
+
+  try {
+    if (request) {
+    final response = await _dio.put('/repair/status/customer-approval/${id}',
+      options: Options(
+      headers: {
+        'Authorization': 'Bearer ${token}', 
+        },
+      ),
+    );
+    if(response.statusCode==200){
+      AwesomeDialog(
+      context: context,
+      dialogType: DialogType.success,
+      animType: AnimType.bottomSlide,
+      title: "Cotizacion Aceptada",
+      desc: "Se comenzara con el siguiente proceso",
+    ).show();
+    }else{
+       AwesomeDialog(
+      context: context,
+      dialogType: DialogType.error,
+      animType: AnimType.bottomSlide,
+      title: "Error en la peticion",
+      desc: "Favor de revisar",).show();
+    }
+    
+  } else {
+    print('Rezhazo de la peticion');
+      final response = await _dio.put('/repair/status/customer-rejection/${id}',
+      options: Options(
+      headers: {
+        'Authorization': 'Bearer ${token}', 
+        },
+      ),
+    );
+    if(response.statusCode==200){
+      AwesomeDialog(
+      context: context,
+      dialogType: DialogType.warning,
+      animType: AnimType.bottomSlide,
+      title: "Cotizacion Rechazada",
+      desc: "Podras pasar   por tu dispostivo",
+    ).show();
+    }else{
+       AwesomeDialog(
+      context: context,
+      dialogType: DialogType.error,
+      animType: AnimType.bottomSlide,
+      title: "Error en la peticion",
+      desc: "Favor de revisar",).show();
+    }
+
+  }
+
+final devicesResponse = await _dio.get('/repair/client/${idUser}',
+      options: Options(
+      headers: {
+        'Authorization': 'Bearer ${token}', 
+        },
+      ),
+    );
+
+
+
+  } catch (e) {
+     AwesomeDialog(
+      context: context,
+      dialogType: DialogType.error,
+      animType: AnimType.bottomSlide,
+      title: "Error en la peticion",
+      desc: e.toString(),).show();
+      print(e.toString());
+  }
+  
+}
+
+Future<void> _loadDevicesFromPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? devicesJson = prefs.getString('listDevices');
+  
+  
+
+    if (devicesJson != null) {
+      try {
+        List<dynamic> jsonList = jsonDecode(devicesJson);
+
+        List<Map<String, dynamic>> adaptedDevices = jsonList.map((device) {
+          return {
+            'id': device['id'].toString(),
+            'tipo': device['device']['deviceType']['name'].toString(),
+            'modelo': device['device']['model'].toString(),
+            'marca': device['device']['brand'].toString(),
+            'serie': device['device']['serialNumber'].toString(),
+            'problema': device['problem_description'].toString(),
+            'cliente': device['cliente'] ?? 'Desconocido',
+            'fecha': device['entry_date'].toString(),
+            'diagnostico':
+                (device['diagnostic_observations'] ?? 'N/A').toString(),
+            'estado': device['repairStatus']['name'].toString(),
+          };
+        }).toList();
+
+        setState(() {
+          devices.addAll(adaptedDevices);
+        });
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cargar dispositivos: $e')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se encontraron dispositivos guardados.')),
+      );
+    }
+  }
+
+
+  void _showCotizacionModal(BuildContext context, Map<String, dynamic> device) {
     showDialog(
       context: context,
       builder: (context) {
@@ -54,23 +159,28 @@ class _DevicesClientState extends State<DevicesClient> {
             style: TextStyle(color: Color(0xff172554)),
           ),
           content: const Text(
-            '¿Seguro que deseas aceptar la cotización?',
+            '¿Deseas  aceptar o rechazar la cotización?',
             style: TextStyle(fontSize: 16),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 setState(() {
-                  device['estado'] = 'Listo para entrega';
+                  device['estado'] = 'READY_FOR_COLLECTION';
                 });
+                _SendRequest(false,device['id']);
                 Navigator.of(context).pop();
               },
-              child: const Text('Cancelar'),
+              child: const Text('Rechazar'),
             ),
             ElevatedButton(
               onPressed: () {
                 setState(() {
-                  device['estado'] = 'En reparación';
+                  device['repairStatus'] = 'En reparación';
+                });
+                _SendRequest(true,device['id']);
+                  setState(() {
+                  device['estado'] = 'WAITING_FOR_PARTS';
                 });
                 Navigator.of(context).pop();
               },
@@ -84,13 +194,13 @@ class _DevicesClientState extends State<DevicesClient> {
 
   IconData _getDeviceIcon(String tipo) {
     switch (tipo) {
-      case 'Celular':
+      case 'SMARTPHONE':
         return Icons.phone_iphone;
-      case 'Computadora':
+      case 'LAPTOP':
         return Icons.laptop;
-      case 'Monitor':
+      case 'DESKTOP':
         return Icons.desktop_mac;
-      case 'Tablet':
+      case 'TABLET':
         return Icons.tablet;
       default:
         return Icons.devices;
@@ -99,21 +209,21 @@ class _DevicesClientState extends State<DevicesClient> {
 
   IconData _getEstadoIcon(String estado) {
     switch (estado) {
-      case 'Ingresado':
+      case 'RECEIVED':
         return Icons.add_task;
-      case 'Diagnóstico':
+      case 'DIAGNOSIS':
         return Icons.medical_services;
-      case 'Cotización':
+      case 'QUOTATION':
         return Icons.receipt_long;
-      case 'En espera de aceptación del cliente':
+      case 'WAITING_FOR_CUSTOMER_APPROVAL':
         return Icons.hourglass_empty;
-      case 'En espera de piezas':
+      case 'WAITING_FOR_PARTS':
         return Icons.timelapse;
-      case 'En reparación':
+      case 'REPAIRING':
         return Icons.build;
-      case 'Listo para entrega':
+      case 'READY_FOR_COLLECTION':
         return Icons.check_circle;
-      case 'Entregado':
+      case 'COLLECTED':
         return Icons.done_all;
       default:
         return Icons.error;
@@ -121,11 +231,11 @@ class _DevicesClientState extends State<DevicesClient> {
   }
 
   Color _getColorForEstado(String estado) {
-    return estado == 'Cotización'
+    return estado == 'WAITING_FOR_CUSTOMER_APPROVAL'
         ? Colors.green
-        : estado == 'Listo para entrega'
+        : estado == 'READY_FOR_COLLECTION'
             ? Colors.blue
-            : estado == 'En reparación'
+            : estado == 'REPAIRING'
             ? const Color.fromARGB(255, 145, 33, 243)
             : Colors.orange;
   }
@@ -145,7 +255,7 @@ class _DevicesClientState extends State<DevicesClient> {
               final device = devices[index];
               return GestureDetector(
                 onTap: () {
-                  if (device['estado'] == 'Cotización') {
+                  if (device['estado'] == 'WAITING_FOR_CUSTOMER_APPROVAL') {
                     _showCotizacionModal(context, device);
                   }
                 },
@@ -203,8 +313,10 @@ class _DevicesClientState extends State<DevicesClient> {
                               ],
                             ),
                             Column(
+                              
                               children: [
                                 Text(
+
                                   'Fecha',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
