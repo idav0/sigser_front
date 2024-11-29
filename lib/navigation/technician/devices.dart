@@ -90,9 +90,45 @@ class _DevicesState extends State<Devices> {
       );
     }
   }
-  
 
- IconData _getDeviceIcon(String tipo) {
+ Future<void> _startRepair(String repairId) async {
+  final String url =
+      '${dotenv.env['BASE_URL']}/repair/status/start-repair/$repairId';
+
+  try {
+    final response = await http.put(Uri.parse(url));
+
+    // Imprimir el response completo en consola
+    debugPrint('Response status: ${response.statusCode}');
+    debugPrint('Response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Reparación iniciada correctamente.')),
+      );
+      setState(() {
+        devices.removeWhere((device) => device['id'] == repairId);
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error al iniciar reparación: ${response.statusCode}',
+          ),
+        ),
+      );
+    }
+  } catch (e) {
+    // Imprimir error en consola
+    debugPrint('Error en la solicitud: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error al conectar con el servidor: $e')),
+    );
+  }
+}
+
+
+  IconData _getDeviceIcon(String tipo) {
     switch (tipo) {
       case 'SMARTPHONE':
         return Icons.phone_android;
@@ -153,8 +189,6 @@ class _DevicesState extends State<Devices> {
     }
   }
 
-  
-
   void _showDiagnosticModal(BuildContext context, Map<String, dynamic> device) {
     String? buttonText;
     VoidCallback? buttonAction;
@@ -170,19 +204,53 @@ class _DevicesState extends State<Devices> {
       case 'DIAGNOSIS':
         buttonText = 'Crear Reporte';
         buttonAction = () {
-        Navigator.of(context).pop();
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => RepairFormScreen(
-              repairId: int.parse(device['id']),
+          Navigator.of(context).pop();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RepairFormScreen(
+                repairId: int.parse(device['id']),
+              ),
             ),
-          ),
-        );
-      };
-      break;
+          );
+        };
+        break;
       case 'QUOTATION':
-        buttonText = 'Aprobar Cotización';
+        buttonText = 'Producto Cotizado';
+        buttonAction = () {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Aprobando cotización...')),
+          );
+        };
+        break;
+      case 'WAITING_FOR_CUSTOMER_APPROVAL':
+        buttonText = 'Aprobando cotización...';
+        buttonAction = () {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Aprobando cotización...')),
+          );
+        };
+        break;
+      case 'WAITING_FOR_PARTS':
+        buttonText = 'Piezas Listas';
+        buttonAction = () {
+          Navigator.of(context).pop();
+          _startRepair(
+              device['id']); 
+        };
+        break;
+      case 'REPAIRING':
+        buttonText = 'Terminar';
+        buttonAction = () {
+          Navigator.of(context).pop();
+          _startRepair(
+              device['id']); 
+        };
+        break;
+      case 'READY_FOR_COLLECTION':
+        buttonText = 'Aprobando cotización...';
         buttonAction = () {
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
