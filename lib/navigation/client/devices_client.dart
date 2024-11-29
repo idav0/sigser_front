@@ -313,8 +313,10 @@ Future<void> _loadDevicesFromPreferences() async {
                               ],
                             ),
                             Column(
+                              
                               children: [
                                 Text(
+
                                   'Fecha',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
