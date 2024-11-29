@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sigser_front/modules/kernel/widgets/complete_repair_form_screen.dart';
 import 'package:sigser_front/modules/kernel/widgets/repair_form_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -61,7 +62,7 @@ class _DevicesState extends State<Devices> {
     }
   }
 
-  Future<void> _startDiagnostic(String repairId) async {
+ Future<void> _startDiagnostic(String repairId) async {
     final String url =
         '${dotenv.env['BASE_URL']}/repair/status/start-diagnostic/$repairId';
 
@@ -189,6 +190,7 @@ class _DevicesState extends State<Devices> {
     }
   }
 
+//AREA TRABAJO AARON ----------------------------------------------------------------------
   void _showDiagnosticModal(BuildContext context, Map<String, dynamic> device) {
     String? buttonText;
     VoidCallback? buttonAction;
@@ -201,6 +203,8 @@ class _DevicesState extends State<Devices> {
           _startDiagnostic(device['id']);
         };
         break;
+
+        //Abre pantalla
       case 'DIAGNOSIS':
         buttonText = 'Crear Reporte';
         buttonAction = () {
@@ -215,6 +219,7 @@ class _DevicesState extends State<Devices> {
           );
         };
         break;
+
       case 'QUOTATION':
         buttonText = 'Producto Cotizado';
         buttonAction = () {
@@ -241,12 +246,20 @@ class _DevicesState extends State<Devices> {
               device['id']); 
         };
         break;
+
+        //Abre Pantalla
       case 'REPAIRING':
         buttonText = 'Terminar';
-        buttonAction = () {
+         buttonAction = () {
           Navigator.of(context).pop();
-          _startRepair(
-              device['id']); 
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CompleteRepairFormScreen(
+                repairId: int.parse(device['id']),
+              ),
+            ),
+          );
         };
         break;
       case 'READY_FOR_COLLECTION':

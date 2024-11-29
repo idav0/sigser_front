@@ -67,10 +67,6 @@ Future<void> _submitForm() async {
       "diagnostic_estimated_cost": diagnosticEstimatedCost,
     };
 
-    // Imprime los datos en la consola antes de enviarlos
-    debugPrint("Datos del formulario a enviar: ${jsonEncode(requestData)}");
-
-    // Mostrar SnackBar para progreso
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Enviando formulario...')),
     );
