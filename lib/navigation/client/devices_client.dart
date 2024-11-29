@@ -1,7 +1,9 @@
 import 'dart:convert';
-
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
 
 class DevicesClient extends StatefulWidget {
   const DevicesClient({Key? key}) : super(key: key);
@@ -12,16 +14,90 @@ class DevicesClient extends StatefulWidget {
 }
 
 class _DevicesClientState extends State<DevicesClient> {
+final Dio _dio = Dio(BaseOptions(baseUrl: '${dotenv.env['BASE_URL']}'));
+
   List<Map<String, dynamic>> devices = [];
 @override
   void initState() {
     super.initState();
     _loadDevicesFromPreferences();
   }
+
+Future<void> _SendRequest(request,id) async {
+  print('Entro');
+  final prefs = await SharedPreferences.getInstance();
+  String? token = prefs.getString('token'); 
+
+
+  try {
+    if (request) {
+    final response = await _dio.put('/repair/status/customer-approval/${id}',
+      options: Options(
+      headers: {
+        'Authorization': 'Bearer ${token}', 
+        },
+      ),
+    );
+    if(response.statusCode==200){
+      AwesomeDialog(
+      context: context,
+      dialogType: DialogType.success,
+      animType: AnimType.bottomSlide,
+      title: "Cotizacion Aceptada",
+      desc: "Se comenzara con la reparación",
+    ).show();
+    }else{
+       AwesomeDialog(
+      context: context,
+      dialogType: DialogType.error,
+      animType: AnimType.bottomSlide,
+      title: "Error en la peticion",
+      desc: "Favor de revisar",).show();
+    }
+    
+  } else {
+    print('Rezhazo de la peticion');
+      final response = await _dio.put('/repair/status/customer-rejection/${id}',
+      options: Options(
+      headers: {
+        'Authorization': 'Bearer ${token}', 
+        },
+      ),
+    );
+    if(response.statusCode==200){
+      AwesomeDialog(
+      context: context,
+      dialogType: DialogType.warning,
+      animType: AnimType.bottomSlide,
+      title: "Cotizacion Rechazada",
+      desc: "Podras pasar   por tu dispostivo",
+    ).show();
+    }else{
+       AwesomeDialog(
+      context: context,
+      dialogType: DialogType.error,
+      animType: AnimType.bottomSlide,
+      title: "Error en la peticion",
+      desc: "Favor de revisar",).show();
+    }
+
+  }
+  } catch (e) {
+     AwesomeDialog(
+      context: context,
+      dialogType: DialogType.error,
+      animType: AnimType.bottomSlide,
+      title: "Error en la peticion",
+      desc: e.toString(),).show();
+      print(e.toString());
+  }
+  
+}
+
 Future<void> _loadDevicesFromPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     String? devicesJson = prefs.getString('listDevices');
-    print(devicesJson);
+  
   
 
     if (devicesJson != null) {
@@ -70,24 +146,28 @@ Future<void> _loadDevicesFromPreferences() async {
             style: TextStyle(color: Color(0xff172554)),
           ),
           content: const Text(
-            '¿Seguro que deseas aceptar la cotización?',
+            '¿Deseas  aceptar o rechazar la cotización?',
             style: TextStyle(fontSize: 16),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 setState(() {
-                  device['estado'] = 'Listo para entrega';
+                  device['estado'] = 'READY_FOR_COLLECTION';
                 });
+                print('id:');
+                print(device['id']);
+                _SendRequest(false,device['id']);
                 Navigator.of(context).pop();
               },
-              child: const Text('Cancelar'),
+              child: const Text('Rechazar'),
             ),
             ElevatedButton(
               onPressed: () {
                 setState(() {
-                  device['estado'] = 'En reparación';
+                  device['repairStatus'] = 'En reparación';
                 });
+                _SendRequest(true,device['id']);
                 Navigator.of(context).pop();
               },
               child: const Text('Aceptar'),
@@ -100,13 +180,13 @@ Future<void> _loadDevicesFromPreferences() async {
 
   IconData _getDeviceIcon(String tipo) {
     switch (tipo) {
-      case 'Celular':
+      case 'SMARTPHONE':
         return Icons.phone_iphone;
-      case 'Computadora':
+      case 'LAPTOP':
         return Icons.laptop;
-      case 'Monitor':
+      case 'DESKTOP':
         return Icons.desktop_mac;
-      case 'Tablet':
+      case 'TABLET':
         return Icons.tablet;
       default:
         return Icons.devices;
@@ -115,21 +195,21 @@ Future<void> _loadDevicesFromPreferences() async {
 
   IconData _getEstadoIcon(String estado) {
     switch (estado) {
-      case 'Ingresado':
+      case 'RECEIVED':
         return Icons.add_task;
-      case 'Diagnóstico':
+      case 'DIAGNOSIS':
         return Icons.medical_services;
-      case 'Cotización':
+      case 'QUOTATION':
         return Icons.receipt_long;
-      case 'En espera de aceptación del cliente':
+      case 'WAITING_FOR_CUSTOMER_APPROVAL':
         return Icons.hourglass_empty;
-      case 'En espera de piezas':
+      case 'WAITING_FOR_PARTS':
         return Icons.timelapse;
-      case 'En reparación':
+      case 'REPAIRING':
         return Icons.build;
-      case 'Listo para entrega':
+      case 'READY_FOR_COLLECTION':
         return Icons.check_circle;
-      case 'Entregado':
+      case 'COLLECTED':
         return Icons.done_all;
       default:
         return Icons.error;
@@ -137,11 +217,11 @@ Future<void> _loadDevicesFromPreferences() async {
   }
 
   Color _getColorForEstado(String estado) {
-    return estado == 'Cotización'
+    return estado == 'WAITING_FOR_CUSTOMER_APPROVAL'
         ? Colors.green
-        : estado == 'Listo para entrega'
+        : estado == 'READY_FOR_COLLECTION'
             ? Colors.blue
-            : estado == 'En reparación'
+            : estado == 'REPAIRING'
             ? const Color.fromARGB(255, 145, 33, 243)
             : Colors.orange;
   }
@@ -161,7 +241,7 @@ Future<void> _loadDevicesFromPreferences() async {
               final device = devices[index];
               return GestureDetector(
                 onTap: () {
-                  if (device['estado'] == 'Cotización') {
+                  if (device['estado'] == 'WAITING_FOR_CUSTOMER_APPROVAL') {
                     _showCotizacionModal(context, device);
                   }
                 },
