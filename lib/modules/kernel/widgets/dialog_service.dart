@@ -20,7 +20,6 @@ class DialogService {
     ).show();
   }
 
-
   void showErrorDialog(BuildContext context,
       {String? title, String? description}) {
     AwesomeDialog(
