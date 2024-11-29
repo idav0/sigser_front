@@ -27,6 +27,8 @@ Future<void> _SendRequest(request,id) async {
   print('Entro');
   final prefs = await SharedPreferences.getInstance();
   String? token = prefs.getString('token'); 
+  int? idUser = prefs.getInt('id');
+
 
 
   try {
@@ -44,7 +46,7 @@ Future<void> _SendRequest(request,id) async {
       dialogType: DialogType.success,
       animType: AnimType.bottomSlide,
       title: "Cotizacion Aceptada",
-      desc: "Se comenzara con la reparación",
+      desc: "Se comenzara con el siguiente proceso",
     ).show();
     }else{
        AwesomeDialog(
@@ -82,6 +84,17 @@ Future<void> _SendRequest(request,id) async {
     }
 
   }
+
+final devicesResponse = await _dio.get('/repair/client/${idUser}',
+      options: Options(
+      headers: {
+        'Authorization': 'Bearer ${token}', 
+        },
+      ),
+    );
+
+
+
   } catch (e) {
      AwesomeDialog(
       context: context,
@@ -155,8 +168,6 @@ Future<void> _loadDevicesFromPreferences() async {
                 setState(() {
                   device['estado'] = 'READY_FOR_COLLECTION';
                 });
-                print('id:');
-                print(device['id']);
                 _SendRequest(false,device['id']);
                 Navigator.of(context).pop();
               },
@@ -168,6 +179,9 @@ Future<void> _loadDevicesFromPreferences() async {
                   device['repairStatus'] = 'En reparación';
                 });
                 _SendRequest(true,device['id']);
+                  setState(() {
+                  device['estado'] = 'WAITING_FOR_PARTS';
+                });
                 Navigator.of(context).pop();
               },
               child: const Text('Aceptar'),
