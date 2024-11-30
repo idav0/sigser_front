@@ -16,7 +16,7 @@ class DialogService {
       animType: AnimType.bottomSlide,
       title: title,
       desc: description,
-      btnOkOnPress: () {},
+
     ).show();
   }
 
@@ -29,7 +29,6 @@ class DialogService {
       animType: AnimType.bottomSlide,
       title: title,
       desc: description,
-      btnOkOnPress: () {},
     ).show();
   }
 
@@ -41,7 +40,7 @@ class DialogService {
       animType: AnimType.scale,
       title: title,
       desc: description,
-      btnOkOnPress: () {},
     ).show();
   }
+  
 }

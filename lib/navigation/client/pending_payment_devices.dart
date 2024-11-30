@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -17,8 +16,6 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
  List<Map<String, dynamic>> devices = [];
 
   void _navigateToPayment(BuildContext context, device) {
-    print('id:');
-    print(device['id']);
     AwesomeDialog(
             context: context,
             dialogType: DialogType.info,
@@ -37,7 +34,7 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
               final prefs = await SharedPreferences.getInstance();
               String? token = prefs.getString('token'); 
       
-              try {
+          
                 final response = await _dio.put('/repair/status/paid/${device['id']}',
                 options: Options(
                 headers: {
@@ -61,21 +58,11 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
                       dialogType: DialogType.error,
                       animType: AnimType.rightSlide,
                       title: 'Operacion Cancelada',
+                      desc: 'Status Code: ${response.statusCode} : ${response.statusMessage} '
                     ).show();
                 }
-              } catch (e) {
-                AwesomeDialog(
-                      context: context,
-                      dialogType: DialogType.error,
-                      animType: AnimType.rightSlide,
-                      title: 'Operacion Cancelada',
-                      desc: e.toString()
-                    ).show();
-              }
-              
             },
             ).show();
-    
   }
 @override
   void initState() {
