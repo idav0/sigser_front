@@ -16,18 +16,16 @@ class _ProfileState extends State<Profile> {
       TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  // Variables para almacenar los datos del usuario
   String name = '';
   String lastname = '';
   String email = '';
   String phone = '';
 
-  // Recupera los datos desde SharedPreferences
   Future<void> loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       name = prefs.getString('name') ?? 'Sin Nombre';
-      lastname =prefs.getString('lastname') ?? 'Sin Apellido'; // Agregar lastName
+      lastname =prefs.getString('lastname') ?? 'Sin Apellido';
       email = prefs.getString('email') ?? 'Sin Correo';
       phone = prefs.getString('phone') ?? 'Sin Teléfono';
     });
@@ -36,7 +34,7 @@ class _ProfileState extends State<Profile> {
   @override
   void initState() {
     super.initState();
-    loadUserData(); // Carga los datos al iniciar el widget
+    loadUserData();
   }
 
   String? validatePassword(String? value) {
@@ -104,7 +102,7 @@ class _ProfileState extends State<Profile> {
               ),
               const SizedBox(height: 17),
               Text(
-                '$name $lastname', // Mostrar nombre y apellido
+                '$name $lastname',
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -124,13 +122,11 @@ class _ProfileState extends State<Profile> {
                   color: Colors.grey,
                 ),
               ),
-
               const SizedBox(height: 25),
               const Divider(
                 color: Colors.grey,
                 thickness: 1,
               ),
-              // Botón de cambiar contraseña
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.white,
@@ -221,18 +217,16 @@ class _ProfileState extends State<Profile> {
                         ),
                         TextButton(
                           onPressed: () async {
-                            // Aquí se limpia la información de sesión
                             SharedPreferences prefs =
                                 await SharedPreferences.getInstance();
-                            await prefs.remove('name'); // Elimina el nombre
+                            await prefs.remove('name');
                             await prefs
-                                .remove('lastName'); // Elimina el apellido
-                            await prefs.remove('email'); // Elimina el correo
-                            await prefs.remove('phone'); // Elimina el teléfono
+                                .remove('lastName');
+                            await prefs.remove('email');
+                            await prefs.remove('phone');
 
-                            // Navega a la pantalla de inicio de sesión
                             Navigator.pushNamed(context,
-                                '/login'); // Asegúrate de tener configurada la ruta '/login'
+                                '/login');
                           },
                           child: const Text('Aceptar'),
                         ),

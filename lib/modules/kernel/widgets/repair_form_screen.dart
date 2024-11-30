@@ -18,7 +18,9 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
   final _estimatedCostController = TextEditingController();
   final List<TextEditingController> _partsControllers = [];
   final Dio _dio = Dio();
-  final RegExp _validInputRegex = RegExp(r'^[a-zA-Z0-9\s]+$');
+  bool _addPartsVisible = false;
+
+  final RegExp _validInputRegex = RegExp(r'^[a-zA-Z0-9ñÑ\s]+$');
 
   @override
   void dispose() {
@@ -54,13 +56,22 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
     });
   }
 
+  void _clearParts() {
+    setState(() {
+      for (var controller in _partsControllers) {
+        controller.dispose();
+      }
+      _partsControllers.clear();
+    });
+  }
+
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       final String diagnosticObservations = _technicianObservationsController.text;
       final double diagnosticEstimatedCost = double.parse(_estimatedCostController.text);
-      final List<String> diagnosticParts = _partsControllers.map((controller) => controller.text).toList();
+      final List<String> diagnosticParts =
+          _partsControllers.map((controller) => controller.text).toList();
 
-      // Mostrar SnackBar para progreso
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enviando formulario...')),
       );
@@ -71,11 +82,13 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
       try {
         final response = await _dio.put(
           url,
+          data: json.encode({
+            'observations': diagnosticObservations,
+            'estimated_cost': diagnosticEstimatedCost,
+            'parts': diagnosticParts,
+          }),
           options: Options(headers: {'Content-Type': 'application/json'}),
         );
-
-        // Imprimir respuesta en consola
-        debugPrint('Respuesta del servidor: ${response.data}');
 
         if (response.statusCode == 200) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -89,14 +102,13 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
         }
       } on DioError catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error de conexión: ${e.response?.data ?? e.message}')),
+          SnackBar(
+              content: Text('Error de conexión: ${e.response?.data ?? e.message}')),
         );
-        debugPrint('Error en la petición: ${e.response?.data ?? e.message}');
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error inesperado: $e')),
         );
-        debugPrint('Error inesperado: $e');
       }
     }
   }
@@ -130,12 +142,35 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
                 maxLines: 3,
               ),
               const SizedBox(height: 16),
-              _buildSectionTitle('¿Desea agregar piezas necesarias?'),
+              _buildSectionTitle('¿Desea agregar una pieza?'),
               const SizedBox(height: 8),
               _buildAddPartButtons(),
               const SizedBox(height: 16),
-              _buildPartsSection(),
-              const SizedBox(height: 16),
+              if (_addPartsVisible) ...[
+                _buildPartsSection(),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: ElevatedButton.icon(
+                    onPressed: _addPartField,
+                    icon: const Icon(Icons.build, color: Colors.white),
+                    label: const Text(
+                      'Agregar pieza',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563eb),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               _buildSectionTitle('Costo Estimado de Diagnóstico'),
               const SizedBox(height: 8),
               _buildTextField(
@@ -205,54 +240,91 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
     );
   }
 
-  Widget _buildPartsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (int i = 0; i < _partsControllers.length; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildTextField(
-                    controller: _partsControllers[i],
-                    hintText: 'Nombre de la pieza...',
-                    validator: _validateInput,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () => _removePartField(i),
-                  icon: const Icon(Icons.remove_circle, color: Colors.red),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
   Widget _buildAddPartButtons() {
     return Row(
       children: [
         ElevatedButton(
-          onPressed: _addPartField,
+          onPressed: () {
+            setState(() {
+              _addPartsVisible = true;
+            });
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF34D399),
             foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            elevation: 5,
           ),
-          child: const Text('Agregar Pieza'),
+          child: const Row(
+            children: [
+              Icon(Icons.check, size: 20),
+              SizedBox(width: 8),
+              Text('Sí',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
         ),
         const SizedBox(width: 16),
         ElevatedButton(
-          onPressed: () {},
+          onPressed: () {
+            setState(() {
+              _addPartsVisible = false;
+              _clearParts();
+            });
+          },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFF87171),
+            backgroundColor: const Color(0xFFEF4444),
             foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            elevation: 5,
           ),
-          child: const Text('Cancelar'),
+          child: const Row(
+            children: [
+              Icon(Icons.close, size: 20),
+              SizedBox(width: 8),
+              Text('No',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildPartsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Piezas Reemplazadas',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        for (int i = 0; i < _partsControllers.length; i++) ...[
+          Row(
+            children: [
+              Expanded(
+                child: _buildTextField(
+                  controller: _partsControllers[i],
+                  hintText: 'Nombre de la pieza',
+                  validator: _validateInput,
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => _removePartField(i),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
       ],
     );
   }
