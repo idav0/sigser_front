@@ -62,7 +62,7 @@ class _DevicesState extends State<Devices> {
     }
   }
 
- Future<void> _startDiagnostic(String repairId) async {
+  Future<void> _startDiagnostic(String repairId) async {
     final String url =
         '${dotenv.env['BASE_URL']}/repair/status/start-diagnostic/$repairId';
 
@@ -92,42 +92,41 @@ class _DevicesState extends State<Devices> {
     }
   }
 
- Future<void> _startRepair(String repairId) async {
-  final String url =
-      '${dotenv.env['BASE_URL']}/repair/status/start-repair/$repairId';
+  Future<void> _startRepair(String repairId) async {
+    final String url =
+        '${dotenv.env['BASE_URL']}/repair/status/start-repair/$repairId';
 
-  try {
-    final response = await http.put(Uri.parse(url));
+    try {
+      final response = await http.put(Uri.parse(url));
 
-    // Imprimir el response completo en consola
-    debugPrint('Response status: ${response.statusCode}');
-    debugPrint('Response body: ${response.body}');
+      // Imprimir el response completo en consola
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response body: ${response.body}');
 
-    if (response.statusCode == 200) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Reparación iniciada correctamente.')),
-      );
-      setState(() {
-        devices.removeWhere((device) => device['id'] == repairId);
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Error al iniciar reparación: ${response.statusCode}',
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Reparación iniciada correctamente.')),
+        );
+        setState(() {
+          devices.removeWhere((device) => device['id'] == repairId);
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error al iniciar reparación: ${response.statusCode}',
+            ),
           ),
-        ),
+        );
+      }
+    } catch (e) {
+      // Imprimir error en consola
+      debugPrint('Error en la solicitud: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al conectar con el servidor: $e')),
       );
     }
-  } catch (e) {
-    // Imprimir error en consola
-    debugPrint('Error en la solicitud: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error al conectar con el servidor: $e')),
-    );
   }
-}
-
 
   IconData _getDeviceIcon(String tipo) {
     switch (tipo) {
@@ -199,12 +198,34 @@ class _DevicesState extends State<Devices> {
       case 'RECEIVED':
         buttonText = 'Iniciar Diagnóstico';
         buttonAction = () {
-          Navigator.of(context).pop();
-          _startDiagnostic(device['id']);
+          // Mostrar la alerta de confirmación
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text(
+                    '¿Estás seguro que deseas iniciar el diagnóstico?'),
+                actions: <Widget>[
+                  TextButton(
+                    child: const Text('No'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  TextButton(
+                    child: const Text('Sí'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _startDiagnostic(device['id']); // Inicia diagnóstico
+                    },
+                  ),
+                ],
+              );
+            },
+          );
         };
         break;
 
-        //Abre pantalla
       case 'DIAGNOSIS':
         buttonText = 'Crear Reporte';
         buttonAction = () {
@@ -223,34 +244,104 @@ class _DevicesState extends State<Devices> {
       case 'QUOTATION':
         buttonText = 'Producto Cotizado';
         buttonAction = () {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Aprobando cotización...')),
+          // Mostrar la alerta de confirmación
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text(
+                    '¿Estás seguro que deseas aprobar la cotización?'),
+                actions: <Widget>[
+                  TextButton(
+                    child: const Text('No'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  TextButton(
+                    child: const Text('Sí'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Aprobando cotización...')),
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
           );
-        };
-        break;
-      case 'WAITING_FOR_CUSTOMER_APPROVAL':
-        buttonText = 'Aprobando cotización...';
-        buttonAction = () {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Aprobando cotización...')),
-          );
-        };
-        break;
-      case 'WAITING_FOR_PARTS':
-        buttonText = 'Piezas Listas';
-        buttonAction = () {
-          Navigator.of(context).pop();
-          _startRepair(
-              device['id']); 
         };
         break;
 
-        //Abre Pantalla
+      case 'WAITING_FOR_CUSTOMER_APPROVAL':
+        buttonText = 'Aprobando cotización...';
+        buttonAction = () {
+          // Mostrar la alerta de confirmación
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text(
+                    '¿Estás seguro que deseas aprobar la cotización?'),
+                actions: <Widget>[
+                  TextButton(
+                    child: const Text('No'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  TextButton(
+                    child: const Text('Sí'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Aprobando cotización...')),
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        };
+        break;
+
+      case 'WAITING_FOR_PARTS':
+        buttonText = 'Piezas Listas';
+        buttonAction = () {
+          // Mostrar la alerta de confirmación
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('¿Estás seguro que las piezas están listas?'),
+                actions: <Widget>[
+                  TextButton(
+                    child: const Text('No'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  TextButton(
+                    child: const Text('Sí'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _startRepair(device['id']); // Inicia reparación
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        };
+        break;
+
       case 'REPAIRING':
         buttonText = 'Terminar';
-         buttonAction = () {
+        buttonAction = () {
           Navigator.of(context).pop();
           Navigator.push(
             context,
@@ -262,19 +353,42 @@ class _DevicesState extends State<Devices> {
           );
         };
         break;
+
       case 'READY_FOR_COLLECTION':
         buttonText = 'Aprobando cotización...';
         buttonAction = () {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Aprobando cotización...')),
+          // Mostrar la alerta de confirmación
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text(
+                    '¿Estás seguro que deseas aprobar la cotización?'),
+                actions: <Widget>[
+                  TextButton(
+                    child: const Text('No'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  TextButton(
+                    child: const Text('Sí'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Aprobando cotización...')),
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
           );
         };
         break;
-      default:
-        buttonText = null;
-        buttonAction = null;
     }
+
     showDialog(
       context: context,
       builder: (context) {
