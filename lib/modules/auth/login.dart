@@ -7,6 +7,7 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:sigser_front/modules/kernel/widgets/custom_text_field_password.dart';
+import 'package:sigser_front/modules/kernel/widgets/dialog_service.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -57,7 +58,7 @@ void showCorrectDialog(BuildContext context, String authority) {
           context, '/menuTechnician'); // Navegar al menú de técnicos
     } else {
       Navigator.pushNamed(
-          context, '/menuClient'); // Navegar al menú de clientes 
+          context, '/menuClient'); // Navegar al menú de clientes
     }
   });
 }
@@ -170,48 +171,84 @@ class _LoginState extends State<Login> {
                       child: ElevatedButton(
                         onPressed: () async {
                           if (_formKey.currentState!.validate()) {
+                            var dataUser = {
+                              'email': _emailController.text,
+                              'password': _passwordController.text,
+                            };
+
                             try {
-                              var dataUser = {
-                                'email': _emailController.text,
-                                'password': _passwordController.text,
-                              };
                               final response = await _dio.post(
                                 '/auth/login',
                                 data: dataUser,
+                                options: Options(
+                                  validateStatus: (status) =>
+                                      status! <
+                                      500, // No lanza excepción para códigos < 500
+                                ),
                               );
                               if (response.statusCode == 200) {
                                 var userInfo =
                                     response.data['data']['userInfo'];
-                                var authority = userInfo['authorities'][0]
-                                    ['authority']; // Obtener el rol
+                                var authority =
+                                    userInfo['authorities'][0]['authority'];
+                                var id = userInfo['id'];
 
-                                // Obtener dispositivos (si es necesario)
-                                final devices = await _dio.get(
-                                  authority == 'TECHNICIAN'
-                                      ? '/repair/technician/${userInfo['id']}'
-                                      : '/repair/client/${userInfo['id']}',
-                                  options: Options(
-                                    headers: {
-                                      'Authorization':
-                                          'Bearer${response.data['data']['loginInfo']['token']}',
-                                    },
-                                  ),
+                                if (authority == "TECHNICIAN") {
+                                  final devices = await _dio.get(
+                                    '/repair/technician/$id',
+                                    options: Options(
+                                      headers: {
+                                        'Authorization':
+                                            'Bearer ${response.data['data']['loginInfo']['token']}',
+                                      },
+                                    ),
+                                  );
+                                  saveData(response.data, devices.data);
+                                  showCorrectDialog(context, authority);
+                                } else if (authority == "CLIENT") {
+                                  final devices = await _dio.get(
+                                    '/repair/client/$id',
+                                    options: Options(
+                                      headers: {
+                                        'Authorization':
+                                            'Bearer ${response.data['data']['loginInfo']['token']}',
+                                      },
+                                    ),
+                                  );
+                                  saveData(response.data, devices.data);
+                                  showCorrectDialog(context, authority);
+                                } else {
+                                   DialogService().showInfoDialog(
+                                    context,
+                                    title: 'INFO',
+                                    description: 'Este tipo de usuario no está disponible para esta plataforma',
                                 );
-
-                                // Guardar datos del usuario
-                                saveData(response.data, devices.data);
-
-                                // Llamar a showCorrectDialog con el rol
-                                showCorrectDialog(context, authority);
+                                }
+                              } else if (response.statusCode == 403) {
+                                Navigator.pushNamed(context, '/changePassword');
+                              } else if (response.statusCode == 401) {
+                                DialogService().showErrorDialog(
+                                    context,
+                                    title: 'ERROR',
+                                    description: 'Credenciales incorrectas',
+                                );
+                              } else {
+                                 DialogService().showErrorDialog(
+                                    context,
+                                    title: 'ERROR',
+                                    description: 'Error inesperado: ${response.statusCode}',
+                                );
+  
                               }
                             } catch (e) {
-                              AwesomeDialog(
-                                context: context,
-                                dialogType: DialogType.error,
-                                animType: AnimType.bottomSlide,
-                                title: "ERROR",
-                                desc: e.toString(),
-                              ).show();
+                              if (e is DioException) {                              
+                                  DialogService().showErrorDialog(
+                                    context,
+                                    title: 'ERROR',
+                                    description: 'Error inesperado: ${e.response?.statusCode}',
+                                );
+                              }
+                              
                             }
                           }
                         },
