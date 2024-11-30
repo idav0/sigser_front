@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dio/dio.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:sigser_front/modules/kernel/widgets/dialog_service.dart';
+
 class PendingPaymentDevices extends StatefulWidget {
   const PendingPaymentDevices({super.key});
 
@@ -13,58 +15,57 @@ class PendingPaymentDevices extends StatefulWidget {
 
 class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
   final Dio _dio = Dio(BaseOptions(baseUrl: '${dotenv.env['BASE_URL']}'));
- List<Map<String, dynamic>> devices = [];
+  List<Map<String, dynamic>> devices = [];
 
   void _navigateToPayment(BuildContext context, device) {
     AwesomeDialog(
-            context: context,
-            dialogType: DialogType.info,
-            animType: AnimType.rightSlide,
-            title: 'Accion a realizar',
-            desc: '¿Deseas pagar en este momento tu reparacion?',
-            btnCancelOnPress: ()  {
-              AwesomeDialog(
-                context: context,
-                dialogType: DialogType.error,
-                animType: AnimType.rightSlide,
-                 title: 'Operación Cancelada',
-              ).show();
+      context: context,
+      dialogType: DialogType.info,
+      animType: AnimType.rightSlide,
+      title: 'Accion a realizar',
+      desc: '¿Deseas pagar en este momento tu reparacion?',
+      btnCancelOnPress: () {
+         DialogService().showErrorDialog(
+            context,
+            title: 'CANCELADA',
+            description: 'Operación Cancelada',
+          );
+      },
+      btnOkOnPress: () async {
+        final prefs = await SharedPreferences.getInstance();
+        String? token = prefs.getString('token');
+
+        final response = await _dio.put(
+          '/repair/status/paid/${device['id']}',
+          options: Options(
+            headers: {
+              'Authorization': 'Bearer ${token}',
             },
-            btnOkOnPress: () async{
-              final prefs = await SharedPreferences.getInstance();
-              String? token = prefs.getString('token'); 
-      
-          
-                final response = await _dio.put('/repair/status/paid/${device['id']}',
-                options: Options(
-                headers: {
-                  'Authorization': 'Bearer ${token}', 
-                    },
-                  ),
-                );
-                if (response.statusCode==200) {
-                   AwesomeDialog(
-                      context: context,
-                      dialogType: DialogType.success,
-                      animType: AnimType.rightSlide,
-                      title: 'Operación Realizada con Exito',
-                    ).show();
-                    setState(() {
-                      device['pago'] = true;
-                    });
-                } else {
-                  AwesomeDialog(
-                      context: context,
-                      dialogType: DialogType.error,
-                      animType: AnimType.rightSlide,
-                      title: 'Operacion Cancelada',
-                      desc: 'Status Code: ${response.statusCode} : ${response.statusMessage} '
-                    ).show();
-                }
-            },
-            ).show();
+            validateStatus: (status) => status! < 500,
+          ),
+        );
+        if (response.statusCode == 200) {
+          DialogService().showSuccessDialog(
+            context,
+            title: 'EXITO',
+            description: 'Operación realizada con exito',
+          );
+          setState(() {
+            device['pago'] = true;
+          });
+        } else {
+          DialogService().showErrorDialog(
+            context,
+            title: 'CANCELADA',
+            description:
+                'Operacion cancelada StatusCode:${response.statusCode}',
+          );
+        }
+      },
+    ).show();
   }
-@override
+
+  @override
   void initState() {
     super.initState();
     _loadDevicesFromPreferences();
@@ -73,8 +74,6 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
   Future<void> _loadDevicesFromPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     String? devicesJson = prefs.getString('listDevices');
-  
-  
 
     if (devicesJson != null) {
       try {
@@ -85,7 +84,7 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
             'id': device['id'].toString(),
             'pago': device['paid'],
             'tipo': device['device']['deviceType']['name'].toString(),
-             'tipoId': device['device']['deviceType']['id'].toString(),
+            'tipoId': device['device']['deviceType']['id'].toString(),
             'modelo': device['device']['model'].toString(),
             'marca': device['device']['brand'].toString(),
             'serie': device['device']['serialNumber'].toString(),
@@ -96,7 +95,6 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
             'diagnostico':
                 (device['diagnostic_observations'] ?? 'N/A').toString(),
             'estado': device['repairStatus']['name'].toString(),
-            
           };
         }).toList();
 
@@ -110,16 +108,17 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se encontraron dispositivos guardados.')),
+        const SnackBar(
+            content: Text('No se encontraron dispositivos guardados.')),
       );
     }
   }
+
   @override
   Widget build(BuildContext context) {
-
     final pendingPaymentDevices =
-        devices.where((device) => device['pago'] == false ).toList();
-  
+        devices.where((device) => device['pago'] == false).toList();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -165,7 +164,6 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
                         fontSize: 16,
                       ),
                     ),
-                    
                     const SizedBox(height: 8),
                     Text(
                       'Fecha de Ingreso: ${device['fecha']}',

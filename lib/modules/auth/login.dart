@@ -233,14 +233,12 @@ class _LoginState extends State<Login> {
                                     description: 'Credenciales incorrectas',
                                 );
                               } else {
-                                AwesomeDialog(
-                                  context: context,
-                                  dialogType: DialogType.error,
-                                  animType: AnimType.bottomSlide,
-                                  title: "ERROR",
-                                  desc:
-                                      "Error inesperado: ${response.statusCode}",
-                                ).show();
+                                 DialogService().showErrorDialog(
+                                    context,
+                                    title: 'ERROR',
+                                    description: 'Error inesperado: ${response.statusCode}',
+                                );
+  
                               }
                             } catch (e) {
                               if (e is DioException) {                              
