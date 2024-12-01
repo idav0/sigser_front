@@ -121,7 +121,7 @@ class _HistoryState extends State<History> {
                   setState(() {
                     selectedDeviceType = value!;
                   });
-                  Navigator.pop(context); // Cierra el menú después de seleccionar
+                  Navigator.pop(context);
                 },
                 decoration: const InputDecoration(
                   labelText: 'Tipo de Dispositivo',
@@ -141,7 +141,7 @@ class _HistoryState extends State<History> {
                   setState(() {
                     dateOrder = value!;
                   });
-                  Navigator.pop(context); // Cierra el menú después de seleccionar
+                  Navigator.pop(context); 
                 },
                 decoration: const InputDecoration(
                   labelText: 'Orden de Fecha',
@@ -166,7 +166,7 @@ class _HistoryState extends State<History> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.filter_list_rounded),
+          icon: const Icon(Icons.filter_list_rounded, color: Color.fromARGB(255, 12, 18, 104),),
           onPressed: _showFilterMenu,
         ),
         actions: [
@@ -184,7 +184,7 @@ class _HistoryState extends State<History> {
                 children: [
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Icon(Icons.search, color: Colors.black),
+                    child: Icon(Icons.search, color: Color.fromARGB(255, 12, 18, 104)),
                   ),
                   Expanded(
                     child: TextField(
