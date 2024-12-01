@@ -58,7 +58,7 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
             context,
             title: 'CANCELADA',
             description:
-                'Operacion cancelada StatusCode:${response.statusCode}',
+                'Operacion cancelada StatusCode:${response.statusCode} : ${response.data['message']}',
           );
         }
       },
