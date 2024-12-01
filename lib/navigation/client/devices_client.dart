@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:sigser_front/modules/kernel/widgets/dialog_service.dart';
 
 class DevicesClient extends StatefulWidget {
   const DevicesClient({Key? key}) : super(key: key);
@@ -38,27 +39,25 @@ Future<void> _SendRequest(request,id) async {
       headers: {
         'Authorization': 'Bearer ${token}', 
         },
+        validateStatus: (status) => status! < 500,
       ),
     );
     if(response.statusCode==200){
-      AwesomeDialog(
-      context: context,
-      dialogType: DialogType.success,
-      animType: AnimType.bottomSlide,
-      title: "Cotizacion Aceptada",
-      desc: "Se comenzara con el siguiente proceso",
-    ).show();
+      DialogService().showSuccessDialog(
+            context,
+            title: 'Cotizacion Aceptada',
+            description: 'Se comenzara con el siguiente proceso',
+          );
     }else{
-       AwesomeDialog(
-      context: context,
-      dialogType: DialogType.error,
-      animType: AnimType.bottomSlide,
-      title: "Error en la peticion",
-      desc: "Favor de revisar",).show();
+      print(response);
+       DialogService().showErrorDialog(
+            context,
+            title: 'Error en la peticion',
+            description: 'Favor de revisar Status ${response.statusCode} : ${response.data['message']}',
+          );
     }
     
   } else {
-    print('Rezhazo de la peticion');
       final response = await _dio.put('/repair/status/customer-rejection/${id}',
       options: Options(
       headers: {
@@ -67,20 +66,18 @@ Future<void> _SendRequest(request,id) async {
       ),
     );
     if(response.statusCode==200){
-      AwesomeDialog(
-      context: context,
-      dialogType: DialogType.warning,
-      animType: AnimType.bottomSlide,
-      title: "Cotizacion Rechazada",
-      desc: "Podras pasar   por tu dispostivo",
-    ).show();
+      DialogService().showInfoDialog(
+            context,
+            title: 'Cotizacion Rechazada',
+            description: 'Podras pasar   por tu dispostivo',
+          );
     }else{
-       AwesomeDialog(
-      context: context,
-      dialogType: DialogType.error,
-      animType: AnimType.bottomSlide,
-      title: "Error en la peticion",
-      desc: "Favor de revisar",).show();
+      DialogService().showErrorDialog(
+            context,
+            title: 'Error en la peticion',
+            description: 'Favor de revisar ${response.statusCode} : ${response.data['message']}',
+          );
+       
     }
 
   }
@@ -96,13 +93,12 @@ final devicesResponse = await _dio.get('/repair/client/${idUser}',
 
 
   } catch (e) {
-     AwesomeDialog(
-      context: context,
-      dialogType: DialogType.error,
-      animType: AnimType.bottomSlide,
-      title: "Error en la peticion",
-      desc: e.toString(),).show();
-      print(e.toString());
+     DialogService().showErrorDialog(
+            context,
+            title: 'Error en la peticion',
+            description: 'Favor de revisar ${ e.toString()}',
+          );
+  
   }
   
 }
