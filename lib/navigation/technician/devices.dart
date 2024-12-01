@@ -99,7 +99,6 @@ class _DevicesState extends State<Devices> {
     try {
       final response = await http.put(Uri.parse(url));
 
-      // Imprimir el response completo en consola
       debugPrint('Response status: ${response.statusCode}');
       debugPrint('Response body: ${response.body}');
 
@@ -120,7 +119,6 @@ class _DevicesState extends State<Devices> {
         );
       }
     } catch (e) {
-      // Imprimir error en consola
       debugPrint('Error en la solicitud: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al conectar con el servidor: $e')),
@@ -189,7 +187,6 @@ class _DevicesState extends State<Devices> {
     }
   }
 
-//AREA TRABAJO AARON ----------------------------------------------------------------------
   void _showDiagnosticModal(BuildContext context, Map<String, dynamic> device) {
     String? buttonText;
     VoidCallback? buttonAction;
@@ -198,7 +195,6 @@ class _DevicesState extends State<Devices> {
       case 'RECEIVED':
         buttonText = 'Iniciar Diagnóstico';
         buttonAction = () {
-          // Mostrar la alerta de confirmación
           showDialog(
             context: context,
             builder: (BuildContext context) {
@@ -216,7 +212,7 @@ class _DevicesState extends State<Devices> {
                     child: const Text('Sí'),
                     onPressed: () {
                       Navigator.of(context).pop();
-                      _startDiagnostic(device['id']); // Inicia diagnóstico
+                      _startDiagnostic(device['id']); 
                     },
                   ),
                 ],
@@ -244,7 +240,6 @@ class _DevicesState extends State<Devices> {
       case 'QUOTATION':
         buttonText = 'Producto Cotizado';
         buttonAction = () {
-          // Mostrar la alerta de confirmación
           showDialog(
             context: context,
             builder: (BuildContext context) {
@@ -278,7 +273,6 @@ class _DevicesState extends State<Devices> {
       case 'WAITING_FOR_CUSTOMER_APPROVAL':
         buttonText = 'Aprobando cotización...';
         buttonAction = () {
-          // Mostrar la alerta de confirmación
           showDialog(
             context: context,
             builder: (BuildContext context) {
@@ -312,7 +306,6 @@ class _DevicesState extends State<Devices> {
       case 'WAITING_FOR_PARTS':
         buttonText = 'Piezas Listas';
         buttonAction = () {
-          // Mostrar la alerta de confirmación
           showDialog(
             context: context,
             builder: (BuildContext context) {
@@ -329,7 +322,7 @@ class _DevicesState extends State<Devices> {
                     child: const Text('Sí'),
                     onPressed: () {
                       Navigator.of(context).pop();
-                      _startRepair(device['id']); // Inicia reparación
+                      _startRepair(device['id']);
                     },
                   ),
                 ],
@@ -357,7 +350,6 @@ class _DevicesState extends State<Devices> {
       case 'READY_FOR_COLLECTION':
         buttonText = 'Aprobando cotización...';
         buttonAction = () {
-          // Mostrar la alerta de confirmación
           showDialog(
             context: context,
             builder: (BuildContext context) {
@@ -423,8 +415,8 @@ class _DevicesState extends State<Devices> {
               ElevatedButton(
                 onPressed: buttonAction,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue, // Blue button
-                  foregroundColor: Colors.white, // White text
+                  backgroundColor: Colors.blue, 
+                  foregroundColor: Colors.white, 
                 ),
                 child: Text(buttonText),
               ),
