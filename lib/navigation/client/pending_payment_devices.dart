@@ -83,6 +83,7 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
           return {
             'id': device['id'].toString(),
             'pago': device['paid'],
+            'idStatus': device['repairStatus']['id'],
             'tipo': device['device']['deviceType']['name'].toString(),
             'tipoId': device['device']['deviceType']['id'].toString(),
             'modelo': device['device']['model'].toString(),
@@ -117,7 +118,7 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
   @override
   Widget build(BuildContext context) {
     final pendingPaymentDevices =
-        devices.where((device) => device['pago'] == false).toList();
+        devices.where((device) => device['pago'] == false && device['idStatus'] > 4).toList();
 
     return Scaffold(
       appBar: AppBar(
