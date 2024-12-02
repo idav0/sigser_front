@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
-import 'package:sigser_front/modules/kernel/widgets/device_card.dart'; 
+import 'package:sigser_front/modules/kernel/widgets/device_card.dart';
 
 class DevicesClient extends StatefulWidget {
   const DevicesClient({Key? key}) : super(key: key);
@@ -25,11 +25,20 @@ class _DevicesClientState extends State<DevicesClient> {
   }
 
   Future<void> sendRequest(bool isApproval, String id) async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? token = prefs.getString('token');
-    final int? userId = prefs.getInt('id');
+    setState(() {
+      isLoading = true;
+    });
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? token = prefs.getString('token');
+      final int? userId = prefs.getInt('id');
+
+      if (token == null || userId == null) {
+        _showSnackBar('Token o ID de usuario no encontrados.');
+        return;
+      }
+
       final endpoint = isApproval ? 'customer-approval' : 'customer-rejection';
       final response = await _dio.put(
         '/repair/status/$endpoint/$id',
@@ -52,96 +61,107 @@ class _DevicesClientState extends State<DevicesClient> {
         ).show();
         await _updateDevices(userId);
       } else {
-        AwesomeDialog(
-          context: context,
-          animType: AnimType.scale,
-          dialogType: DialogType.error,
-          title: 'Error en la solicitud',
-          desc: 'Status ${response.statusCode}: ${response.data['message']}',
-          btnOkOnPress: () {},
-        ).show();
+        _showSnackBar('Error en la solicitud: ${response.statusCode}');
       }
     } catch (e) {
-      AwesomeDialog(
-        context: context,
-        animType: AnimType.scale,
-        dialogType: DialogType.error,
-        title: 'Error',
-        desc: 'Ocurrió un problema: ${e.toString()}',
-        btnOkOnPress: () {},
-      ).show();
+      _showSnackBar('Error al conectar con el servidor: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
   Future<void> _loadDevicesFromPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? devicesJson = prefs.getString('listDevices');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? devicesJson = prefs.getString('listDevices');
 
-    if (devicesJson != null) {
-      try {
+      if (devicesJson != null) {
         final List<dynamic> jsonList = jsonDecode(devicesJson);
-        final List<Map<String, dynamic>> adaptedDevices = jsonList.map((device) {
+
+        final List<Map<String, dynamic>> adaptedDevices = jsonList
+            .where((device) => device['repairStatus']['name'] != 'COLLECTED')
+            .map((device) {
+          final deviceData = device['device'] ?? {};
+          final repairStatus = device['repairStatus'] ?? {};
+
           return {
-            'id': device['id'].toString(),
-            'tipo': device['device']['deviceType']['name'].toString(),
-            'modelo': device['device']['model'].toString(),
-            'marca': device['device']['brand'].toString(),
-            'fecha': device['entry_date'].toString(),
-            'estado': device['repairStatus']['name'].toString(),
+            'id': device['id']?.toString() ?? '',
+            'tipo': deviceData['deviceType']?['name']?.toString() ?? 'Desconocido',
+            'modelo': deviceData['model']?.toString() ?? 'Desconocido',
+            'marca': deviceData['brand']?.toString() ?? 'Desconocido',
+            'serie': deviceData['serialNumber']?.toString() ?? 'Desconocido',
+            'problema': device['problem_description']?.toString() ?? 'N/A',
+            'cliente': device['cliente']?.toString() ?? 'Desconocido',
+            'fecha': device['entry_date']?.toString() ?? 'N/A',
+            'diagnostico': device['diagnostic_observations']?.toString() ?? 'N/A',
+            'estado': repairStatus['name']?.toString() ?? 'Sin estado',
           };
         }).toList();
 
         setState(() {
+          devices.clear();
           devices.addAll(adaptedDevices);
         });
-      } catch (e) {
-        _showSnackBar('Error al cargar dispositivos: $e');
       }
-    } else {
-      _showSnackBar('No se encontraron dispositivos guardados.');
+    } catch (e) {
+      _showSnackBar('Error al cargar dispositivos: $e');
     }
   }
 
-  Future<void> _updateDevices(int? userId) async {
+  Future<void> _updateDevices(int userId) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final String token = prefs.getString('token') ?? '';
+
       final response = await _dio.get(
         '/repair/client/$userId',
         options: Options(
-          headers: {'Authorization': 'Bearer ${dotenv.env['TOKEN']}'},
+          headers: {'Authorization': 'Bearer $token'},
         ),
       );
 
       if (response.statusCode == 200) {
-        setState(() {
-          devices.clear();
-          devices.addAll(List<Map<String, dynamic>>.from(response.data));
-        });
+        final devicesData = response.data;
+        _saveDevices(devicesData);
+        await _loadDevicesFromPreferences();
       } else {
-        _showSnackBar('Error al actualizar dispositivos: ${response.statusCode}');
+        _showSnackBar('Error al actualizar dispositivos.');
       }
     } catch (e) {
-      _showSnackBar('Error al actualizar dispositivos: $e');
+      _showSnackBar('Error al conectar con el servidor.');
     }
   }
 
-void _showCotizacionModal(BuildContext context, Map<String, dynamic> device) {
-  AwesomeDialog(
-    context: context,
-    dialogType: DialogType.question,
-    animType: AnimType.scale,
-    title: 'Aceptar Cotización',
-    desc: '¿Deseas aceptar o rechazar esta cotización?',
-    btnCancel: ElevatedButton(
+  void _saveDevices(dynamic devices) async {
+    final prefs = await SharedPreferences.getInstance();
+    final String listDevices = jsonEncode(devices['data']);
+    await prefs.setString('listDevices', listDevices);
+  }
+
+  void _showCotizacionModal(BuildContext context, Map<String, dynamic> device) {
+    AwesomeDialog(
+      context: context,
+      dialogType: DialogType.warning,
+      animType: AnimType.scale,
+      title: 'Aceptar Cotización',
+      desc: '¿Deseas aceptar o rechazar esta cotización?',
+        btnCancel: ElevatedButton(
       onPressed: () {
+        sendRequest(false, device['id']);
         Navigator.of(context).pop();
       },
       style: ElevatedButton.styleFrom(
         foregroundColor: Colors.white,
         backgroundColor: const Color.fromARGB(255, 111, 3, 3),
       ),
-      child: const Text('Cancelar'),
+      child: const Text('Rechazar'),
     ),
-    btnOk: ElevatedButton(
+      btnCancelOnPress: () {
+        sendRequest(false, device['id']);
+      },
+         btnOk: ElevatedButton(
       onPressed: () {
         sendRequest(true, device['id']);
         Navigator.of(context).pop();
@@ -152,15 +172,11 @@ void _showCotizacionModal(BuildContext context, Map<String, dynamic> device) {
       ),
       child: const Text('Aceptar'),
     ),
-    btnOkOnPress: () {
-      sendRequest(true, device['id']);
-    },
-    btnCancelOnPress: () {
-      sendRequest(false, device['id']);
-    },
-  ).show();
-}
-
+      btnOkOnPress: () {
+        sendRequest(true, device['id']);
+      },
+    ).show();
+  }
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -188,7 +204,7 @@ void _showCotizacionModal(BuildContext context, Map<String, dynamic> device) {
                           _showCotizacionModal(context, device);
                         }
                       },
-                      child: DeviceCard(device: device), 
+                      child: DeviceCard(device: device),
                     );
                   },
                 ),
