@@ -25,7 +25,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     } else if (value.contains('<') || value.contains('>') || value.contains(';')) {
       return 'El correo no debe contener caracteres inválidos';
     }
-    return null; // Es válido
+    return null;
   }
 
   void _sendRecoveryEmail() {
@@ -43,81 +43,117 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Recuperar contraseña'),
-        backgroundColor: const Color.fromARGB(255, 70, 90, 156),
-        titleTextStyle: const TextStyle(fontSize: 16, color: Colors.white),
-        elevation: 0,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Center(
-          child: Form(
-            key: _formKey, 
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
+      body: Stack(
+        children: [
+          const Positioned(
+            top: -90,
+            left: -145,
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                Image.asset(
-                  'assets/logo.png', 
-                  width: 80,
-                  height: 80,
+                CircleAvatar(
+                  radius: 110,
+                  backgroundColor: Color.fromARGB(255, 17, 24, 39),
                 ),
-                const SizedBox(height: 50),
-                const Text(
-                  '¿Olvidaste tu contraseña?',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
+                CircleAvatar(
+                  radius: 90,
+                  backgroundColor: Color.fromARGB(255, 23, 37, 84),
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Ingresa tu correo de recuperación',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.8, 
-                  child: TextFormField(
-                    controller: _emailController,
-                    validator: validateEmail, 
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Correo electrónico',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.email),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.8, 
-                  child: ElevatedButton(
-                    onPressed: _sendRecoveryEmail, 
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(255, 5, 8, 167),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'Enviar correo de recuperación',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
+                CircleAvatar(
+                  radius: 70,
+                  backgroundColor: Color.fromARGB(255, 30, 64, 175),
                 ),
               ],
             ),
           ),
-        ),
+          const Positioned(
+            bottom: -30,
+            right: -90,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 110,
+                  backgroundColor: Color.fromARGB(255, 17, 24, 39),
+                ),
+                CircleAvatar(
+                  radius: 90,
+                  backgroundColor: Color.fromARGB(255, 23, 37, 84),
+                ),
+                CircleAvatar(
+                  radius: 70,
+                  backgroundColor: Color.fromARGB(255, 30, 64, 175),
+                ),
+              ],
+            ),
+          ),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'assets/logo.png',
+                      width: 200,
+                      height: 200,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      '¿Olvidaste tu contraseña?',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Ingresa tu correo de recuperación',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    TextFormField(
+                      controller: _emailController,
+                      validator: validateEmail,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        hintText: 'Correo electrónico',
+                        label: Text('ejemplo@gmail.com'),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      height: 48,
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _sendRecoveryEmail,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color.fromARGB(255, 5, 8, 167),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          'Enviar correo de recuperación',
+                          style: TextStyle(fontSize: 18),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
