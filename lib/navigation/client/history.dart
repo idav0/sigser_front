@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sigser_front/modules/kernel/widgets/device_card.dart';
 
 class History extends StatefulWidget {
   const History({super.key});
@@ -33,9 +32,6 @@ class _HistoryState extends State<History> {
         List<dynamic> jsonList = jsonDecode(devicesJson);
 
         List<Map<String, dynamic>> adaptedDevices = jsonList.map((device) {
-          final date = DateTime.parse(device['entry_date']);
-          final formattedDate = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-
           return {
             'id': device['id'],
             'tipo': device['device']['deviceType']['name'],
@@ -44,7 +40,7 @@ class _HistoryState extends State<History> {
             'serie': device['device']['serialNumber'],
             'problema': device['problem_description'],
             'cliente': device['cliente'] ?? 'Desconocido',
-            'fecha': formattedDate, 
+            'fecha': _formatDate(device['entry_date']),
             'diagnostico': device['diagnostic_observations'] ?? 'N/A',
             'estado': device['repairStatus']['name'],
           };
@@ -56,6 +52,18 @@ class _HistoryState extends State<History> {
       } catch (e) {
         print('Error al cargar dispositivos: $e');
       }
+    }
+  }
+
+  String _formatDate(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return 'Fecha desconocida';
+    try {
+      final parsedDate = DateTime.parse(dateString);
+      return '${parsedDate.day.toString().padLeft(2, '0')}/'
+          '${parsedDate.month.toString().padLeft(2, '0')}/'
+          '${parsedDate.year}';
+    } catch (e) {
+      return 'Fecha inválida';
     }
   }
 
@@ -80,8 +88,9 @@ class _HistoryState extends State<History> {
     }
 
     filtered.sort((a, b) {
-      final dateA = _parseDate(a['fecha']);
-      final dateB = _parseDate(b['fecha']);
+      final dateA = DateTime.tryParse(a['fecha'] ?? '');
+      final dateB = DateTime.tryParse(b['fecha'] ?? '');
+      if (dateA == null || dateB == null) return 0;
       return dateOrder == 'Más recientes'
           ? dateB.compareTo(dateA)
           : dateA.compareTo(dateB);
@@ -90,83 +99,19 @@ class _HistoryState extends State<History> {
     return filtered;
   }
 
-  DateTime _parseDate(String date) {
-    final parts = date.split('/');
-    return DateTime(
-      int.parse(parts[2]), 
-      int.parse(parts[1]), 
-      int.parse(parts[0]), 
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.filter_list_rounded),
-          onPressed: _showFilterMenu,
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: _buildSearchBar(),
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: filteredDevices.isEmpty
-            ? const Center(
-                child: Text(
-                  'No hay dispositivos aún.',
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              )
-            : ListView.builder(
-                itemCount: filteredDevices.length,
-                itemBuilder: (context, index) {
-                  final device = filteredDevices[index];
-                  return DeviceCard(device: device);
-                },
-              ),
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Container(
-      width: 250,
-      height: 40,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey),
-      ),
-      child: Row(
-        children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8.0),
-            child: Icon(Icons.search, color: Color.fromARGB(255, 12, 18, 104)),
-          ),
-          Expanded(
-            child: TextField(
-              onChanged: (value) {
-                setState(() {
-                  searchText = value;
-                });
-              },
-              decoration: const InputDecoration(
-                hintText: 'Buscar...',
-                border: InputBorder.none,
-                hintStyle: TextStyle(color: Colors.grey),
-              ),
-              style: const TextStyle(color: Colors.black),
-            ),
-          ),
-        ],
-      ),
-    );
+  IconData _getDeviceIcon(String tipo) {
+    switch (tipo) {
+      case 'SMARTPHONE':
+        return Icons.phone_android;
+      case 'LAPTOP':
+        return Icons.laptop;
+      case 'MONITOR':
+        return Icons.desktop_mac;
+      case 'TABLET':
+        return Icons.tablet;
+      default:
+        return Icons.devices;
+    }
   }
 
   void _showFilterMenu() {
@@ -226,6 +171,143 @@ class _HistoryState extends State<History> {
           ),
         );
       },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(
+            Icons.filter_list_rounded,
+            color: Color.fromARGB(255, 12, 18, 104),
+          ),
+          onPressed: _showFilterMenu,
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Container(
+              width: 250,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey),
+              ),
+              child: Row(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Icon(Icons.search,
+                        color: Color.fromARGB(255, 12, 18, 104)),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      onChanged: (value) {
+                        setState(() {
+                          searchText = value;
+                        });
+                      },
+                      decoration: const InputDecoration(
+                        hintText: 'Buscar...',
+                        border: InputBorder.none,
+                        hintStyle: TextStyle(color: Colors.grey),
+                      ),
+                      style: const TextStyle(color: Colors.black),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: filteredDevices.isEmpty
+            ? const Center(
+                child: Text(
+                  'No hay dispositivos con estado COLLECTED.',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              )
+            : ListView.builder(
+                itemCount: filteredDevices.length,
+                itemBuilder: (context, index) {
+                  final device = filteredDevices[index];
+                  return Card(
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    elevation: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _getDeviceIcon(device['tipo']),
+                            size: 50,
+                            color: Colors.blueGrey,
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                children: [
+                                  const Text(
+                                    'Modelo',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                  Text(device['modelo']),
+                                ],
+                              ),
+                              Column(
+                                children: [
+                                  const Text(
+                                    'Marca',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                  Text(device['marca']),
+                                ],
+                              ),
+                              Column(
+                                children: [
+                                  const Text(
+                                    'Fecha',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                  Text(device['fecha']),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            device['estado'],
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.teal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ),
     );
   }
 }

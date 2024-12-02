@@ -41,22 +41,14 @@ void saveData(data, devices) async {
 }
 
 void showCorrectDialog(BuildContext context, String authority) {
-  AwesomeDialog(
-    context: context,
-    dialogType: DialogType.success,
-    animType: AnimType.bottomSlide,
-    title: "Correcto",
-    desc: "Las credenciales son correctas",
-  ).show();
-
+ 
   Future.delayed(Duration(seconds: 2), () {
-    // Redirigir según el rol del usuario
     if (authority == 'TECHNICIAN') {
       Navigator.pushNamed(
-          context, '/menuTechnician'); // Navegar al menú de técnicos
+          context, '/menuTechnician'); 
     } else {
       Navigator.pushNamed(
-          context, '/menuClient'); // Navegar al menú de clientes
+          context, '/menuClient'); 
     }
   });
 }
