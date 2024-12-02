@@ -1,96 +1,128 @@
-import 'package:flutter/material.dart';
+import 'dart:convert'; // Para Base64
+import 'dart:typed_data'; // Para manipular bytes
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:image/image.dart' as img; // Para redimensionar y comprimir
+import 'package:image_picker/image_picker.dart';
+import 'package:image_input/image_input.dart';
 
 class CompleteRepairFormScreen extends StatefulWidget {
   final int repairId;
-  const CompleteRepairFormScreen({Key? key, required this.repairId}) : super(key: key);
+
+  const CompleteRepairFormScreen({Key? key, required this.repairId})
+      : super(key: key);
 
   @override
   State<CompleteRepairFormScreen> createState() =>
       _CompleteRepairFormScreenState();
 }
 
-
 class _CompleteRepairFormScreenState extends State<CompleteRepairFormScreen> {
-final _formKey = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormState>();
   final _repairObservationsController = TextEditingController();
   final Dio _dio = Dio();
-  final List<TextEditingController> _installedPartsControllers = [];
-  List<String> images = [];
-
-  final RegExp _validInputRegex = RegExp(r'^[a-zA-Z0-9\s]+$');
+  List<XFile> imageInputImages = [];
+  final RegExp _validInputRegex = RegExp(r'^[a-zA-Z0-9ñÑ\s]+$');
 
   @override
   void dispose() {
     _repairObservationsController.dispose();
-    for (var controller in _installedPartsControllers) {
-      controller.dispose();
-    }
     super.dispose();
   }
 
-  void _addPartField() {
-    setState(() {
-      _installedPartsControllers.add(TextEditingController());
-    });
+  /// Comprimir y convertir imagen a Base64
+  Future<String> compressAndConvertToBase64(Uint8List imageBytes,
+      {int maxSizeInBytes = 3 * 1024 * 1024}) async {
+    // Decodificar la imagen
+    img.Image? decodedImage = img.decodeImage(imageBytes);
+
+    if (decodedImage == null) {
+      throw Exception('Error al decodificar la imagen');
+    }
+
+    // Comprimir la imagen ajustando su calidad
+    int quality = 100;
+    Uint8List compressedImage;
+
+    do {
+      compressedImage = Uint8List.fromList(img.encodeJpg(decodedImage, quality: quality));
+      quality -= 10; // Reducir calidad en pasos de 10
+    } while (compressedImage.lengthInBytes > maxSizeInBytes && quality > 0);
+
+    // Convertir la imagen comprimida a Base64
+    return base64Encode(compressedImage);
   }
 
-  void _removePartField(int index) {
-    setState(() {
-      _installedPartsControllers[index].dispose();
-      _installedPartsControllers.removeAt(index);
-    });
-  }
+  Future<void> _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      final repairObservations = _repairObservationsController.text;
 
-  void _addImage() {
-    setState(() {
-      images.add("assets/logo.png");
-    });
-  }
-
-  void _removeImage(int index) {
-    setState(() {
-      images.removeAt(index);
-    });
-  }
-
-Future<void> _submitForm() async {
-  if (_formKey.currentState!.validate()) {
-    final repairObservations = _repairObservationsController.text;
-
-    final requestData = {
-      'id': widget.repairId,
-      'repair_observations': repairObservations,
-    };
-
-    debugPrint('Datos del formulario a enviar: $requestData');
-
-    try {
-      final response = await _dio.put(
-        '${dotenv.env['BASE_URL']}/repair/status/end-repair',
-        data: requestData,
+      // Comprimir y convertir imágenes a Base64
+      final List<String> base64Images = await Future.wait(
+        imageInputImages.map(
+          (image) async {
+            final imageBytes = await image.readAsBytes();
+            return await compressAndConvertToBase64(imageBytes);
+          },
+        ),
       );
 
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Formulario enviado con éxito')),
+      final requestData = {
+        'id': widget.repairId,
+        'repair_observations': repairObservations,
+        'repair_images': base64Images,
+      };
+
+      debugPrint('Datos del formulario a enviar: $requestData');
+
+      try {
+        final response = await _dio.put(
+          '${dotenv.env['BASE_URL']}/repair/status/end-repair',
+          data: requestData,
         );
-        debugPrint('Respuesta del servidor: ${response.data}');
-      } else {
+
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Formulario enviado con éxito')),
+          );
+          debugPrint('Respuesta del servidor: ${response.data}');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error al enviar el formulario')),
+          );
+          debugPrint('Error: ${response.statusCode} - ${response.data}');
+        }
+      } catch (error) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al enviar el formulario')),
+          SnackBar(content: Text('Error: ${error.toString()}')),
         );
-        debugPrint('Error: ${response.statusCode} - ${response.data}');
+        debugPrint('Error al enviar la solicitud: $error');
       }
-    } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${error.toString()}')),
-      );
-      debugPrint('Error al enviar la solicitud: $error');
     }
   }
-}
+
+  Future<ImageSource?> _showImageSourceDialog() {
+    return showDialog<ImageSource>(
+      context: context,
+      builder: (context) {
+        return SimpleDialog(
+          title: const Text('Seleccionar fuente de la imagen'),
+          children: [
+            SimpleDialogOption(
+              child: const Text('Cámara'),
+              onPressed: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            SimpleDialogOption(
+              child: const Text('Galería'),
+              onPressed: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -120,32 +152,66 @@ Future<void> _submitForm() async {
                 maxLines: 3,
               ),
               const SizedBox(height: 16),
-
-              _buildSectionTitle('Piezas Instaladas'),
-              const SizedBox(height: 8),
-              _buildInstalledPartsSection(),
-              const SizedBox(height: 16),
-
               _buildSectionTitle('Evidencia (Imágenes)'),
               const SizedBox(height: 8),
-              _buildImageUploadSection(),
+              ImageInput(
+                images: imageInputImages,
+                allowEdit: true, // Permitir editar imágenes
+                allowMaxImage: 10, // Límite de imágenes
+                onImageSelected: (image) {
+                  setState(() {
+                    imageInputImages.add(image);
+                  });
+                },
+                onImageRemoved: (image, index) {
+                  setState(() {
+                    imageInputImages.removeAt(index);
+                  });
+                },
+                getImageSource: _showImageSourceDialog,
+              ),
               const SizedBox(height: 24),
-
-              Center(
-                child: ElevatedButton(
-                  onPressed: _submitForm,
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: const Color(0xFF172554),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _submitForm,
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: const Color(0xFF172554),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Enviar Formulario',
+                        style: TextStyle(fontSize: 16),
+                      ),
                     ),
                   ),
-                  child: const Text('Enviar Formulario',
-                      style: TextStyle(fontSize: 16)),
-                ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context); // Cierra la pantalla actual
+                      },
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: const Color.fromARGB(255, 111, 3, 3),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cancelar',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -190,102 +256,6 @@ Future<void> _submitForm() async {
       validator: validator,
       maxLines: maxLines,
       keyboardType: keyboardType,
-    );
-  }
-
-  Widget _buildInstalledPartsSection() {
-    return Column(
-      children: [
-        for (int i = 0; i < _installedPartsControllers.length; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildTextField(
-                    controller: _installedPartsControllers[i],
-                    hintText: 'Nombre de la pieza...',
-                    validator: _validateInput,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () => _removePartField(i),
-                  icon: const Icon(Icons.remove_circle, color: Colors.red),
-                ),
-              ],
-            ),
-          ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: ElevatedButton.icon(
-            onPressed: _addPartField,
-            icon: const Icon(Icons.build, color: Colors.white),
-            label: const Text(
-              'Agregar pieza',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563eb),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildImageUploadSection() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (int i = 0; i < images.length; i++)
-          Stack(
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage(images[i]),
-                    fit: BoxFit.cover,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              Positioned(
-                top: 4,
-                right: 4,
-                child: GestureDetector(
-                  onTap: () => _removeImage(i),
-                  child: const CircleAvatar(
-                    radius: 12,
-                    backgroundColor: Colors.red,
-                    child: Icon(Icons.close, size: 16, color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        GestureDetector(
-          onTap: _addImage,
-          child: Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child:
-                const Icon(Icons.add_a_photo, size: 40, color: Colors.black54),
-          ),
-        ),
-      ],
     );
   }
 }
