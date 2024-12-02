@@ -210,7 +210,7 @@ class _LoginState extends State<Login> {
                                 } else {
                                    DialogService().showInfoDialog(
                                     context,
-                                    title: 'INFO',
+                                    title: 'A',
                                     description: 'Este tipo de usuario no está disponible para esta plataforma',
                                 );
                                 }
