@@ -11,6 +11,7 @@ class CompleteRepairFormScreen extends StatefulWidget {
       _CompleteRepairFormScreenState();
 }
 
+
 class _CompleteRepairFormScreenState extends State<CompleteRepairFormScreen> {
 final _formKey = GlobalKey<FormState>();
   final _repairObservationsController = TextEditingController();
@@ -100,7 +101,7 @@ Future<void> _submitForm() async {
               fontWeight: FontWeight.bold, fontSize: 19, color: Colors.white),
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF1e40af),
+        backgroundColor: const Color(0xFF172554),
         elevation: 0,
       ),
       body: SingleChildScrollView(
