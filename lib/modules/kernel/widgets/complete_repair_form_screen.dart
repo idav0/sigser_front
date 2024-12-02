@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
+import 'dart:convert'; // Para Base64
+import 'dart:typed_data'; // Para manipular bytes
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:awesome_dialog/awesome_dialog.dart'; // Paquete para los diálogos
+import 'package:image/image.dart' as img; // Para redimensionar y comprimir
+import 'package:image_picker/image_picker.dart';
+import 'package:image_input/image_input.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CompleteRepairFormScreen extends StatefulWidget {
   final int repairId;
-  const CompleteRepairFormScreen({Key? key, required this.repairId}) : super(key: key);
+
+  const CompleteRepairFormScreen({Key? key, required this.repairId})
+      : super(key: key);
 
   @override
   State<CompleteRepairFormScreen> createState() =>
@@ -12,84 +21,124 @@ class CompleteRepairFormScreen extends StatefulWidget {
 }
 
 class _CompleteRepairFormScreenState extends State<CompleteRepairFormScreen> {
-final _formKey = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormState>();
   final _repairObservationsController = TextEditingController();
   final Dio _dio = Dio();
-  final List<TextEditingController> _installedPartsControllers = [];
-  List<String> images = [];
-
-  final RegExp _validInputRegex = RegExp(r'^[a-zA-Z0-9\s]+$');
+  List<XFile> imageInputImages = [];
+  final RegExp _validInputRegex = RegExp(r'^[a-zA-Z0-9ñÑ\s]+$');
+  bool isLoading = false; // Indicador de carga
 
   @override
   void dispose() {
     _repairObservationsController.dispose();
-    for (var controller in _installedPartsControllers) {
-      controller.dispose();
-    }
     super.dispose();
   }
 
-  void _addPartField() {
+  Future<String> compressAndConvertToBase64(Uint8List imageBytes,
+      {int maxSizeInBytes = 3 * 1024 * 1024}) async {
+    img.Image? decodedImage = img.decodeImage(imageBytes);
+
+    if (decodedImage == null) {
+      throw Exception('Error al decodificar la imagen');
+    }
+
+    int quality = 100;
+    Uint8List compressedImage;
+
+    do {
+      compressedImage =
+          Uint8List.fromList(img.encodeJpg(decodedImage, quality: quality));
+      quality -= 10;
+    } while (compressedImage.lengthInBytes > maxSizeInBytes && quality > 0);
+
+    return base64Encode(compressedImage);
+  }
+ Future<void> _onImageSelected(XFile image) async {
+    final imageBytes = await image.readAsBytes();
+    final imageSizeInBytes = imageBytes.lengthInBytes;
+
+    // Verificar el tipo de archivo (JPG o JPEG)
+    final fileExtension = image.name.split('.').last.toLowerCase();
+    if (fileExtension != 'jpg' && fileExtension != 'jpeg') {
+      AwesomeDialog(
+        context: context,
+        dialogType: DialogType.warning,
+        animType: AnimType.bottomSlide,
+        title: 'Formato no válido',
+        desc: 'Solo se permiten imágenes en formato JPG o JPEG.',
+      ).show();
+      return;
+    }
+    if (imageSizeInBytes > 3 * 1024 * 1024) {
+      AwesomeDialog(
+        context: context,
+        dialogType: DialogType.warning,
+        animType: AnimType.bottomSlide,
+        title: 'Tamaño de la imagen',
+        desc: 'El tamaño de la imagen no puede ser mayor a 3MB.',
+      ).show();
+      return;
+    }
     setState(() {
-      _installedPartsControllers.add(TextEditingController());
+      imageInputImages.add(image);
     });
   }
+  Future<void> _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        isLoading = true; // Inicia el indicador de carga
+      });
 
-  void _removePartField(int index) {
-    setState(() {
-      _installedPartsControllers[index].dispose();
-      _installedPartsControllers.removeAt(index);
-    });
-  }
+      final repairObservations = _repairObservationsController.text;
 
-  void _addImage() {
-    setState(() {
-      images.add("assets/logo.png");
-    });
-  }
-
-  void _removeImage(int index) {
-    setState(() {
-      images.removeAt(index);
-    });
-  }
-
-Future<void> _submitForm() async {
-  if (_formKey.currentState!.validate()) {
-    final repairObservations = _repairObservationsController.text;
-
-    final requestData = {
-      'id': widget.repairId,
-      'repair_observations': repairObservations,
-    };
-
-    debugPrint('Datos del formulario a enviar: $requestData');
-
-    try {
-      final response = await _dio.put(
-        '${dotenv.env['BASE_URL']}/repair/status/end-repair',
-        data: requestData,
+      final List<String> base64Images = await Future.wait(
+        imageInputImages.map(
+          (image) async {
+            final imageBytes = await image.readAsBytes();
+            return await compressAndConvertToBase64(imageBytes);
+          },
+        ),
       );
 
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Formulario enviado con éxito')),
+      final requestData = {
+        'id': widget.repairId,
+        'repair_observations': repairObservations,
+        'repair_images': base64Images,
+      };
+
+      try {
+        final response = await _dio.put(
+          '${dotenv.env['BASE_URL']}/repair/status/end-repair',
+          data: requestData,
         );
-        debugPrint('Respuesta del servidor: ${response.data}');
-      } else {
+
+        if (response.statusCode == 200) {
+          AwesomeDialog(
+            context: context,
+            dialogType: DialogType.success,
+            animType: AnimType.bottomSlide,
+            title: 'Formulario enviado correctamente',
+            desc: 'El diagnóstico se ha enviado con éxito.',
+          ).show().then((_) {
+            Navigator.pop(context);
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error al enviar el formulario')),
+          );
+        }
+      } catch (error) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al enviar el formulario')),
+          SnackBar(content: Text('Error: ${error.toString()}')),
         );
-        debugPrint('Error: ${response.statusCode} - ${response.data}');
+      } finally {
+        setState(() {
+          isLoading = false; // Finaliza el indicador de carga
+        });
       }
-    } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${error.toString()}')),
-      );
-      debugPrint('Error al enviar la solicitud: $error');
     }
   }
-}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,55 +149,99 @@ Future<void> _submitForm() async {
               fontWeight: FontWeight.bold, fontSize: 19, color: Colors.white),
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF1e40af),
+        backgroundColor: const Color(0xFF172554),
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('Observaciones de la Reparación'),
-              const SizedBox(height: 8),
-              _buildTextField(
-                controller: _repairObservationsController,
-                hintText: 'Escriba las observaciones de la reparación aquí...',
-                validator: _validateInput,
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16),
-
-              _buildSectionTitle('Piezas Instaladas'),
-              const SizedBox(height: 8),
-              _buildInstalledPartsSection(),
-              const SizedBox(height: 16),
-
-              _buildSectionTitle('Evidencia (Imágenes)'),
-              const SizedBox(height: 8),
-              _buildImageUploadSection(),
-              const SizedBox(height: 24),
-
-              Center(
-                child: ElevatedButton(
-                  onPressed: _submitForm,
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: const Color(0xFF172554),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle('Observaciones de la Reparación'),
+                  const SizedBox(height: 8),
+                  _buildTextField(
+                    controller: _repairObservationsController,
+                    hintText:
+                        'Escriba las observaciones de la reparación aquí...',
+                    validator: _validateInput,
+                    maxLines: 3,
                   ),
-                  child: const Text('Enviar Formulario',
-                      style: TextStyle(fontSize: 16)),
-                ),
+                  const SizedBox(height: 16),
+                  _buildSectionTitle('Evidencia (Imágenes)'),
+                  const SizedBox(height: 8),
+                  ImageInput(
+                    images: imageInputImages,
+                    allowEdit: true,
+                    allowMaxImage: 10,
+                    onImageSelected: _onImageSelected,
+                    onImageRemoved: (image, index) {
+                      setState(() {
+                        imageInputImages.removeAt(index);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: isLoading ? null : _submitForm,
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: const Color(0xFF172554),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Enviar Formulario',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: isLoading
+                              ? null
+                              : () {
+                                  Navigator.pop(context);
+                                },
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor:
+                                const Color.fromARGB(255, 111, 3, 3),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancelar',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+          if (isLoading)
+            Container(
+              color: Colors.black54,
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -183,108 +276,14 @@ Future<void> _submitForm() async {
       decoration: InputDecoration(
         hintText: hintText,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(8.0),
         ),
+        filled: true,
+        fillColor: Colors.white,
       ),
       validator: validator,
       maxLines: maxLines,
       keyboardType: keyboardType,
-    );
-  }
-
-  Widget _buildInstalledPartsSection() {
-    return Column(
-      children: [
-        for (int i = 0; i < _installedPartsControllers.length; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildTextField(
-                    controller: _installedPartsControllers[i],
-                    hintText: 'Nombre de la pieza...',
-                    validator: _validateInput,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () => _removePartField(i),
-                  icon: const Icon(Icons.remove_circle, color: Colors.red),
-                ),
-              ],
-            ),
-          ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: ElevatedButton.icon(
-            onPressed: _addPartField,
-            icon: const Icon(Icons.build, color: Colors.white),
-            label: const Text(
-              'Agregar pieza',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563eb),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildImageUploadSection() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (int i = 0; i < images.length; i++)
-          Stack(
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage(images[i]),
-                    fit: BoxFit.cover,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              Positioned(
-                top: 4,
-                right: 4,
-                child: GestureDetector(
-                  onTap: () => _removeImage(i),
-                  child: const CircleAvatar(
-                    radius: 12,
-                    backgroundColor: Colors.red,
-                    child: Icon(Icons.close, size: 16, color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        GestureDetector(
-          onTap: _addImage,
-          child: Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child:
-                const Icon(Icons.add_a_photo, size: 40, color: Colors.black54),
-          ),
-        ),
-      ],
     );
   }
 }
