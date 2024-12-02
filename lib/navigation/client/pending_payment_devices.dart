@@ -21,14 +21,12 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
     AwesomeDialog(
       context: context,
       dialogType: DialogType.info,
-      animType: AnimType.rightSlide,
+      animType: AnimType.scale,
       title: 'Accion a realizar',
       desc: '¿Deseas pagar en este momento tu reparacion?',
       btnCancelOnPress: () {
         DialogService().showErrorDialog(
-          context,
-          title: 'CANCELADA',
-          description: 'Operación Cancelada',
+          context
         );
       },
       btnOkOnPress: () async {

@@ -16,13 +16,11 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
       TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  // Variables para almacenar los datos del usuario
   String name = '';
   String lastname = '';
   String email = '';
   String phone = '';
 
-  // Recupera los datos desde SharedPreferences
   Future<void> loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -36,7 +34,7 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
   @override
   void initState() {
     super.initState();
-    loadUserData(); // Carga los datos al iniciar el widget
+    loadUserData(); 
   }
 
   String? validatePassword(String? value) {
@@ -104,7 +102,7 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
               ),
               const SizedBox(height: 17),
               Text(
-                '$name $lastname', // Mostrar nombre y apellido
+                '$name $lastname', 
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -129,7 +127,6 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
                 color: Colors.grey,
                 thickness: 1,
               ),
-              // Botón de cambiar contraseña
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.white,
@@ -220,15 +217,12 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
                         ),
                         TextButton(
                           onPressed: () async {
-                            // Aquí se limpia la información de sesión
                             SharedPreferences prefs =
                                 await SharedPreferences.getInstance();
-                            await prefs.remove('name'); // Elimina el nombre
+                            await prefs.remove('name'); 
                             await prefs.remove('lastname');
-                            await prefs.remove('email'); // Elimina el correo
-                            await prefs.remove('phone'); // Elimina el teléfono
-
-                            // Navega a la pantalla de inicio de sesión
+                            await prefs.remove('email'); 
+                            await prefs.remove('phone');
                             Navigator.pushNamed(context, '/login');
                           },
                           child: const Text('Aceptar'),
