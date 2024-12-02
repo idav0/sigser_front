@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RepairFormScreen extends StatefulWidget {
   final int repairId;
@@ -20,6 +21,7 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
   final List<TextEditingController> _partsControllers = [];
   final Dio _dio = Dio();
   bool _addPartsVisible = false;
+  bool isLoading = false; 
 
   final RegExp _validInputRegex = RegExp(r'^[a-zA-Z0-9ñÑ\s]+$');
 
@@ -66,14 +68,21 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
     });
   }
 
+  void _saveDevices(devices) async {
+    final prefs = await SharedPreferences.getInstance();
+    final listDevices = jsonEncode(devices['data']);
+    await prefs.setString('listDevices', listDevices);
+  }
+
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      final String diagnosticObservations =
-          _technicianObservationsController.text;
-      final double diagnosticEstimatedCost =
-          double.parse(_estimatedCostController.text);
-      final String diagnosticParts =
-          _partsControllers.map((controller) => controller.text).join(', ');
+      setState(() {
+        isLoading = true; 
+      });
+
+      final String diagnosticObservations = _technicianObservationsController.text;
+      final double diagnosticEstimatedCost = double.parse(_estimatedCostController.text);
+      final String diagnosticParts = _partsControllers.map((controller) => controller.text).join(', ');
 
       final Map<String, dynamic> requestData = {
         "id": widget.repairId,
@@ -81,47 +90,74 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
         "diagnostic_parts": diagnosticParts,
         "diagnostic_estimated_cost": diagnosticEstimatedCost,
       };
-      debugPrint('Data a enviar: ${jsonEncode(requestData)}');
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enviando formulario...')),
-      );
-
-      final String url =
-          '${dotenv.env['BASE_URL']}/repair/status/end-diagnostic';
+      final String url = '${dotenv.env['BASE_URL']}/repair/status/end-diagnostic';
 
       try {
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString('token') ?? '';
+        final authority = prefs.getString('rol') ?? '';
+        final userId = prefs.getInt('id') ?? 0;
+
         final response = await _dio.put(
           url,
           data: jsonEncode(requestData),
-          options: Options(headers: {'Content-Type': 'application/json'}),
+          options: Options(headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'}),
         );
-
-        debugPrint('Respuesta del servidor: ${response.data}');
 
         if (response.statusCode == 200) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Diagnóstico enviado con éxito.')),
+          final String devicesUrl = authority == "TECHNICIAN"
+              ? '${dotenv.env['BASE_URL']}/repair/technician/$userId'
+              : '${dotenv.env['BASE_URL']}/repair/client/$userId';
+
+          final devicesResponse = await _dio.get(
+            devicesUrl,
+            options: Options(headers: {'Authorization': 'Bearer $token'}),
           );
-          Navigator.pop(context);
+
+          if (devicesResponse.statusCode == 200) {
+            final devicesData = devicesResponse.data;
+            _saveDevices(devicesData);
+
+            AwesomeDialog(
+              context: context,
+              dialogType: DialogType.success,
+              animType: AnimType.bottomSlide,
+              title: 'Formulario enviado correctamente',
+              desc: 'El diagnóstico se ha enviado con éxito.',
+            ).show().then((_) {
+              Navigator.pop(context);
+            });
+          } else {
+            AwesomeDialog(
+              context: context,
+              dialogType: DialogType.error,
+              animType: AnimType.bottomSlide,
+              title: 'Error al actualizar dispositivos',
+              desc: 'Error al actualizar la lista de dispositivos.',
+            ).show();
+          }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('Error al enviar diagnóstico: ${response.data}')),
-          );
+          AwesomeDialog(
+            context: context,
+            dialogType: DialogType.error,
+            animType: AnimType.bottomSlide,
+            title: 'Error al enviar',
+            desc: 'Error al enviar diagnóstico.',
+          ).show();
         }
-      } on DioError catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text('Error de conexión: ${e.response?.data ?? e.message}')),
-        );
-        debugPrint('Error en la petición: ${e.response?.data ?? e.message}');
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error inesperado: $e')),
-        );
-        debugPrint('Error inesperado: $e');
+        AwesomeDialog(
+          context: context,
+          dialogType: DialogType.error,
+          animType: AnimType.bottomSlide,
+          title: 'Error de conexión',
+          desc: 'Error al conectar con el servidor: $e',
+        ).show();
+      } finally {
+        setState(() {
+          isLoading = false;
+        });
       }
     }
   }
@@ -136,119 +172,127 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
               fontWeight: FontWeight.bold, fontSize: 19, color: Colors.white),
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF1e40af),
+        backgroundColor: const Color(0xFF172554),
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('Observaciones del Técnico'),
-              const SizedBox(height: 8),
-              _buildTextField(
-                controller: _technicianObservationsController,
-                hintText: 'Escriba las observaciones del técnico aquí...',
-                validator: _validateInput,
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16),
-              _buildSectionTitle('¿Desea agregar una pieza?'),
-              const SizedBox(height: 8),
-              _buildAddPartButtons(),
-              const SizedBox(height: 16),
-              if (_addPartsVisible) ...[
-                _buildPartsSection(),
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: ElevatedButton.icon(
-                    onPressed: _addPartField,
-                    icon: const Icon(Icons.build, color: Colors.white),
-                    label: const Text(
-                      'Agregar pieza',
-                      style:
-                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(255, 113, 121, 137),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-              _buildSectionTitle('Costo Estimado de Diagnóstico'),
-              const SizedBox(height: 8),
-              _buildTextField(
-                controller: _estimatedCostController,
-                hintText: 'Ingrese el costo estimado (\$)...',
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, ingrese el costo estimado.';
-                  }
-                  final cost = double.tryParse(value);
-                  if (cost == null || cost < 0) {
-                    return 'Ingrese un valor válido mayor o igual a 0.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _submitForm,
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: const Color(0xFF172554), // Azul
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        'Enviar Diagnóstico',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                    ),
+                  _buildSectionTitle('Observaciones del Técnico'),
+                  const SizedBox(height: 8),
+                  _buildTextField(
+                    controller: _technicianObservationsController,
+                    hintText: 'Escriba las observaciones del técnico aquí...',
+                    validator: _validateInput,
+                    maxLines: 3,
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(
-                            context); // Regresar a la pantalla anterior
-                      },
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: const Color.fromARGB(255, 111, 3, 3),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                  const SizedBox(height: 16),
+                  _buildSectionTitle('¿Desea agregar una pieza?'),
+                  const SizedBox(height: 8),
+                  _buildAddPartButtons(),
+                  const SizedBox(height: 16),
+                  if (_addPartsVisible) ...[
+                    _buildPartsSection(),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: ElevatedButton.icon(
+                        onPressed: _addPartField,
+                        icon: const Icon(Icons.build, color: Colors.white),
+                        label: const Text(
+                          'Agregar pieza',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color.fromARGB(255, 113, 121, 137),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
-                      child: const Text(
-                        'Cancelar',
-                        style: TextStyle(fontSize: 16),
-                      ),
                     ),
+                    const SizedBox(height: 16),
+                  ],
+                  _buildSectionTitle('Costo Estimado de Diagnóstico'),
+                  const SizedBox(height: 8),
+                  _buildTextField(
+                    controller: _estimatedCostController,
+                    hintText: 'Ingrese el costo estimado (\$)...',
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Por favor, ingrese el costo estimado.';
+                      }
+                      final cost = double.tryParse(value);
+                      if (cost == null || cost < 0) {
+                        return 'Ingrese un valor válido mayor o igual a 0.';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _submitForm,
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: const Color(0xFF172554),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Enviar Diagnóstico',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context); 
+                          },
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: const Color.fromARGB(255, 111, 3, 3),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancelar',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
+          if (isLoading)
+            Container(
+              color: Colors.black54,
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -256,32 +300,33 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      style: const TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 16,
+      ),
     );
   }
 
   Widget _buildTextField({
     required TextEditingController controller,
     required String hintText,
-    String? Function(String?)? validator,
+    required String? Function(String?) validator,
     int maxLines = 1,
     TextInputType keyboardType = TextInputType.text,
   }) {
     return TextFormField(
       controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
       decoration: InputDecoration(
         hintText: hintText,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        border: const OutlineInputBorder(),
       ),
       validator: validator,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
     );
   }
 
-  Widget _buildAddPartButtons() {
+    Widget _buildAddPartButtons() {
     return Row(
       children: [
         ElevatedButton(
