@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
 
 class RepairFormScreen extends StatefulWidget {
   final int repairId;
@@ -18,7 +19,9 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
   final _estimatedCostController = TextEditingController();
   final List<TextEditingController> _partsControllers = [];
   final Dio _dio = Dio();
-  final RegExp _validInputRegex = RegExp(r'^[a-zA-Z0-9\s]+$');
+  bool _addPartsVisible = false;
+
+  final RegExp _validInputRegex = RegExp(r'^[a-zA-Z0-9ñÑ\s]+$');
 
   @override
   void dispose() {
@@ -54,58 +57,74 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
     });
   }
 
-Future<void> _submitForm() async {
-  if (_formKey.currentState!.validate()) {
-    final String diagnosticObservations = _technicianObservationsController.text;
-    final double diagnosticEstimatedCost = double.parse(_estimatedCostController.text);
-    final String diagnosticParts = _partsControllers.map((controller) => controller.text).join(', ');
-
-    final Map<String, dynamic> requestData = {
-      "id": widget.repairId,
-      "diagnostic_observations": diagnosticObservations,
-      "diagnostic_parts": diagnosticParts,
-      "diagnostic_estimated_cost": diagnosticEstimatedCost,
-    };
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Enviando formulario...')),
-    );
-
-    final String url =
-        '${dotenv.env['BASE_URL']}/repair/status/end-diagnostic';
-
-    try {
-      final response = await _dio.put(
-        url,
-        data: jsonEncode(requestData),
-        options: Options(headers: {'Content-Type': 'application/json'}),
-      );
-
-      debugPrint('Respuesta del servidor: ${response.data}');
-
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Diagnóstico enviado con éxito.')),
-        );
-        Navigator.pop(context);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al enviar diagnóstico: ${response.data}')),
-        );
+  void _clearParts() {
+    setState(() {
+      for (var controller in _partsControllers) {
+        controller.dispose();
       }
-    } on DioError catch (e) {
+      _partsControllers.clear();
+    });
+  }
+
+  Future<void> _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      final String diagnosticObservations =
+          _technicianObservationsController.text;
+      final double diagnosticEstimatedCost =
+          double.parse(_estimatedCostController.text);
+      final String diagnosticParts =
+          _partsControllers.map((controller) => controller.text).join(', ');
+
+      final Map<String, dynamic> requestData = {
+        "id": widget.repairId,
+        "diagnostic_observations": diagnosticObservations,
+        "diagnostic_parts": diagnosticParts,
+        "diagnostic_estimated_cost": diagnosticEstimatedCost,
+      };
+      debugPrint('Data a enviar: ${jsonEncode(requestData)}');
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error de conexión: ${e.response?.data ?? e.message}')),
+        const SnackBar(content: Text('Enviando formulario...')),
       );
-      debugPrint('Error en la petición: ${e.response?.data ?? e.message}');
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error inesperado: $e')),
-      );
-      debugPrint('Error inesperado: $e');
+
+      final String url =
+          '${dotenv.env['BASE_URL']}/repair/status/end-diagnostic';
+
+      try {
+        final response = await _dio.put(
+          url,
+          data: jsonEncode(requestData),
+          options: Options(headers: {'Content-Type': 'application/json'}),
+        );
+
+        debugPrint('Respuesta del servidor: ${response.data}');
+
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Diagnóstico enviado con éxito.')),
+          );
+          Navigator.pop(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('Error al enviar diagnóstico: ${response.data}')),
+          );
+        }
+      } on DioError catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text('Error de conexión: ${e.response?.data ?? e.message}')),
+        );
+        debugPrint('Error en la petición: ${e.response?.data ?? e.message}');
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error inesperado: $e')),
+        );
+        debugPrint('Error inesperado: $e');
+      }
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -136,12 +155,36 @@ Future<void> _submitForm() async {
                 maxLines: 3,
               ),
               const SizedBox(height: 16),
-              _buildSectionTitle('¿Desea agregar piezas necesarias?'),
+              _buildSectionTitle('¿Desea agregar una pieza?'),
               const SizedBox(height: 8),
               _buildAddPartButtons(),
               const SizedBox(height: 16),
-              _buildPartsSection(),
-              const SizedBox(height: 16),
+              if (_addPartsVisible) ...[
+                _buildPartsSection(),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: ElevatedButton.icon(
+                    onPressed: _addPartField,
+                    icon: const Icon(Icons.build, color: Colors.white),
+                    label: const Text(
+                      'Agregar pieza',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromARGB(255, 113, 121, 137),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               _buildSectionTitle('Costo Estimado de Diagnóstico'),
               const SizedBox(height: 8),
               _buildTextField(
@@ -160,21 +203,48 @@ Future<void> _submitForm() async {
                 },
               ),
               const SizedBox(height: 24),
-              Center(
-                child: ElevatedButton(
-                  onPressed: _submitForm,
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: const Color(0xFF172554),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _submitForm,
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: const Color(0xFF172554), // Azul
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Enviar Diagnóstico',
+                        style: TextStyle(fontSize: 16),
+                      ),
                     ),
                   ),
-                  child: const Text('Enviar Diagnóstico',
-                      style: TextStyle(fontSize: 16)),
-                ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(
+                            context); // Regresar a la pantalla anterior
+                      },
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: const Color.fromARGB(255, 111, 3, 3),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cancelar',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -211,56 +281,91 @@ Future<void> _submitForm() async {
     );
   }
 
-  Widget _buildPartsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (int i = 0; i < _partsControllers.length; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildTextField(
-                    controller: _partsControllers[i],
-                    hintText: 'Nombre de la pieza...',
-                    validator: _validateInput,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () => _removePartField(i),
-                  icon: const Icon(Icons.remove_circle, color: Colors.red),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
   Widget _buildAddPartButtons() {
     return Row(
       children: [
         ElevatedButton(
-          onPressed: _addPartField,
+          onPressed: () {
+            setState(() {
+              _addPartsVisible = true;
+            });
+          },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF34D399),
+            backgroundColor: const Color(0xFF172554),
             foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            elevation: 5,
           ),
-          child: const Text('Agregar Pieza'),
+          child: const Row(
+            children: [
+              Icon(Icons.check, size: 20),
+              SizedBox(width: 8),
+              Text('Sí',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
         ),
         const SizedBox(width: 16),
         ElevatedButton(
           onPressed: () {
-            Navigator.pop(context);
+            setState(() {
+              _addPartsVisible = false;
+              _clearParts();
+            });
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFF87171),
+            backgroundColor: const Color.fromARGB(255, 119, 25, 25),
             foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            elevation: 5,
           ),
-          child: const Text('Cancelar'),
+          child: const Row(
+            children: [
+              Icon(Icons.close, size: 20),
+              SizedBox(width: 8),
+              Text('No',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildPartsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Piezas Reemplazadas',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        for (int i = 0; i < _partsControllers.length; i++) ...[
+          Row(
+            children: [
+              Expanded(
+                child: _buildTextField(
+                  controller: _partsControllers[i],
+                  hintText: 'Nombre de la pieza',
+                  validator: _validateInput,
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => _removePartField(i),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
       ],
     );
   }
