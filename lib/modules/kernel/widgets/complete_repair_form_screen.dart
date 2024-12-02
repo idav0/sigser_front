@@ -3,6 +3,7 @@ import 'dart:typed_data'; // Para manipular bytes
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:awesome_dialog/awesome_dialog.dart'; // Paquete para los diálogos
 import 'package:image/image.dart' as img; // Para redimensionar y comprimir
 import 'package:image_picker/image_picker.dart';
 import 'package:image_input/image_input.dart';
@@ -34,14 +35,12 @@ class _CompleteRepairFormScreenState extends State<CompleteRepairFormScreen> {
   /// Comprimir y convertir imagen a Base64
   Future<String> compressAndConvertToBase64(Uint8List imageBytes,
       {int maxSizeInBytes = 3 * 1024 * 1024}) async {
-    // Decodificar la imagen
     img.Image? decodedImage = img.decodeImage(imageBytes);
 
     if (decodedImage == null) {
       throw Exception('Error al decodificar la imagen');
     }
 
-    // Comprimir la imagen ajustando su calidad
     int quality = 100;
     Uint8List compressedImage;
 
@@ -50,15 +49,49 @@ class _CompleteRepairFormScreenState extends State<CompleteRepairFormScreen> {
       quality -= 10; // Reducir calidad en pasos de 10
     } while (compressedImage.lengthInBytes > maxSizeInBytes && quality > 0);
 
-    // Convertir la imagen comprimida a Base64
     return base64Encode(compressedImage);
+  }
+
+  /// Validar y manejar la selección de imágenes
+  Future<void> _onImageSelected(XFile image) async {
+    final imageBytes = await image.readAsBytes();
+    final imageSizeInBytes = imageBytes.lengthInBytes;
+
+    // Verificar el tipo de archivo (JPG o JPEG)
+    final fileExtension = image.name.split('.').last.toLowerCase();
+    if (fileExtension != 'jpg' && fileExtension != 'jpeg') {
+      AwesomeDialog(
+        context: context,
+        dialogType: DialogType.warning,
+        animType: AnimType.bottomSlide,
+        title: 'Formato no válido',
+        desc: 'Solo se permiten imágenes en formato JPG o JPEG.',
+      ).show();
+      return;
+    }
+
+    // Verificar el tamaño de la imagen
+    if (imageSizeInBytes > 3 * 1024 * 1024) {
+      AwesomeDialog(
+        context: context,
+        dialogType: DialogType.warning,
+        animType: AnimType.bottomSlide,
+        title: 'Tamaño de la imagen',
+        desc: 'El tamaño de la imagen no puede ser mayor a 3MB.',
+      ).show();
+      return;
+    }
+
+    // Si la imagen pasa ambas validaciones, agregarla a la lista
+    setState(() {
+      imageInputImages.add(image);
+    });
   }
 
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       final repairObservations = _repairObservationsController.text;
 
-      // Comprimir y convertir imágenes a Base64
       final List<String> base64Images = await Future.wait(
         imageInputImages.map(
           (image) async {
@@ -83,9 +116,15 @@ class _CompleteRepairFormScreenState extends State<CompleteRepairFormScreen> {
         );
 
         if (response.statusCode == 200) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Formulario enviado con éxito')),
-          );
+          AwesomeDialog(
+            context: context,
+            dialogType: DialogType.success,
+            animType: AnimType.bottomSlide,
+            title: 'Formulario enviado correctamente',
+            desc: 'El diagnóstico se ha enviado con éxito.',
+          ).show().then((_) {
+            Navigator.pop(context);
+          });
           debugPrint('Respuesta del servidor: ${response.data}');
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -156,13 +195,9 @@ class _CompleteRepairFormScreenState extends State<CompleteRepairFormScreen> {
               const SizedBox(height: 8),
               ImageInput(
                 images: imageInputImages,
-                allowEdit: true, // Permitir editar imágenes
-                allowMaxImage: 10, // Límite de imágenes
-                onImageSelected: (image) {
-                  setState(() {
-                    imageInputImages.add(image);
-                  });
-                },
+                allowEdit: true,
+                allowMaxImage: 10,
+                onImageSelected: _onImageSelected,
                 onImageRemoved: (image, index) {
                   setState(() {
                     imageInputImages.removeAt(index);
@@ -195,7 +230,7 @@ class _CompleteRepairFormScreenState extends State<CompleteRepairFormScreen> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.pop(context); // Cierra la pantalla actual
+                        Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(
                         foregroundColor: Colors.white,
@@ -250,8 +285,10 @@ class _CompleteRepairFormScreenState extends State<CompleteRepairFormScreen> {
       decoration: InputDecoration(
         hintText: hintText,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(8.0),
         ),
+        filled: true,
+        fillColor: Colors.white,
       ),
       validator: validator,
       maxLines: maxLines,
