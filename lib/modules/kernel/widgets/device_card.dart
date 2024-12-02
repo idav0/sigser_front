@@ -6,6 +6,11 @@ class DeviceCard extends StatelessWidget {
 
   const DeviceCard({Key? key, required this.device}) : super(key: key);
 
+  String _formatDate(String date) {
+    final parsedDate = DateTime.parse(date);
+    return '${parsedDate.day.toString().padLeft(2, '0')}/${parsedDate.month.toString().padLeft(2, '0')}/${parsedDate.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -27,7 +32,7 @@ class DeviceCard extends StatelessWidget {
               children: [
                 _buildInfoColumn('Modelo', device['modelo']),
                 _buildInfoColumn('Marca', device['marca']),
-                _buildInfoColumn('Fecha', device['fecha']),
+                _buildInfoColumn('Fecha', _formatDate(device['fecha'])),
               ],
             ),
             const SizedBox(height: 16),
@@ -43,7 +48,7 @@ class DeviceCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  DeviceUtils.translateEstado(device['estado']), 
+                  DeviceUtils.translateEstado(device['estado']),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.blue,

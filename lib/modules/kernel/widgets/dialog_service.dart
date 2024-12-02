@@ -35,7 +35,7 @@ class DialogService {
       {String? title, String? description}) {
     AwesomeDialog(
       context: context,
-      dialogType: DialogType.info,
+      dialogType: DialogType.warning,
       animType: AnimType.scale,
       title: title,
       desc: description,

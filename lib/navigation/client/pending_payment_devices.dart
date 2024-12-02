@@ -21,15 +21,13 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
     AwesomeDialog(
       context: context,
       dialogType: DialogType.info,
-      animType: AnimType.rightSlide,
+      animType: AnimType.scale,
       title: 'Accion a realizar',
       desc: '¿Deseas pagar en este momento tu reparacion?',
       btnCancelOnPress: () {
-         DialogService().showErrorDialog(
-            context,
-            title: 'CANCELADA',
-            description: 'Operación Cancelada',
-          );
+        DialogService().showErrorDialog(
+          context
+        );
       },
       btnOkOnPress: () async {
         final prefs = await SharedPreferences.getInstance();
@@ -39,7 +37,7 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
           '/repair/status/paid/${device['id']}',
           options: Options(
             headers: {
-              'Authorization': 'Bearer ${token}',
+              'Authorization': 'Bearer $token',
             },
             validateStatus: (status) => status! < 500,
           ),
@@ -47,19 +45,12 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
         if (response.statusCode == 200) {
           DialogService().showSuccessDialog(
             context,
-            title: 'EXITO',
-            description: 'Operación realizada con exito',
+            title: 'ÉXITO',
+            description: 'Operación realizada con éxito',
           );
           setState(() {
             device['pago'] = true;
           });
-        } else {
-          DialogService().showErrorDialog(
-            context,
-            title: 'CANCELADA',
-            description:
-                'Operacion cancelada StatusCode:${response.statusCode} : ${response.data['message']}',
-          );
         }
       },
     ).show();
@@ -80,6 +71,10 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
         List<dynamic> jsonList = jsonDecode(devicesJson);
 
         List<Map<String, dynamic>> adaptedDevices = jsonList.map((device) {
+          final date = DateTime.parse(device['entry_date']);
+          final formattedDate =
+              '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+
           return {
             'id': device['id'].toString(),
             'pago': device['paid'],
@@ -90,11 +85,10 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
             'marca': device['device']['brand'].toString(),
             'serie': device['device']['serialNumber'].toString(),
             'problema': device['problem_description'].toString(),
-            'costoTotal': device['total_price'].toString(),
+            'costoTotal': device['diagnostic_estimated_cost'].toString(),
             'cliente': device['cliente'] ?? 'Desconocido',
-            'fecha': device['entry_date'].toString(),
-            'diagnostico':
-                (device['diagnostic_observations'] ?? 'N/A').toString(),
+            'fecha': formattedDate,
+            'diagnostico': (device['diagnostic_observations'] ?? 'N/A').toString(),
             'estado': device['repairStatus']['name'].toString(),
           };
         }).toList();
@@ -109,8 +103,7 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('No se encontraron dispositivos guardados.')),
+        const SnackBar(content: Text('No se encontraron dispositivos guardados.')),
       );
     }
   }
@@ -125,10 +118,9 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
         title: const Text(
           'Pagos Pendientes',
           style: TextStyle(
-              fontWeight: FontWeight.bold, fontSize: 19, color: Colors.white),
+              fontWeight: FontWeight.bold, fontSize: 19, color: Color.fromARGB(255, 0, 0, 0)),
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF1e40af),
         elevation: 0,
       ),
       body: ListView.builder(
@@ -161,8 +153,8 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
                     Text(
                       'Problema: ${device['problema']}',
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: 14,
+                        color: Colors.grey,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -177,8 +169,9 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
                     Text(
                       'Costo Total: \$${device['costoTotal']}',
                       style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Color(0xFF172554),
                       ),
                     ),
                     const SizedBox(height: 16),

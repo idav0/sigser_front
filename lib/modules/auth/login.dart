@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,18 +19,16 @@ void saveData(data, devices) async {
   final prefs = await SharedPreferences.getInstance();
 
   var userInfo = data['data']['userInfo'];
-  var authority = userInfo['authorities'][0]['authority']; // Obtener rol
+  var authority = userInfo['authorities'][0]['authority']; 
   var userId = userInfo['id'];
   var token = data['data']['loginInfo']['token'];
 
-  // Validar y asignar valores
-  var name = userInfo['name'] ?? ''; // Usar valor predeterminado si es nulo
+  var name = userInfo['name'] ?? '';
   var lastname = userInfo['lastname'] ?? '';
   var email = userInfo['email'] ?? '';
   var phone = userInfo['phone'] ?? '';
   var ListDevices = jsonEncode(devices['data']);
 
-  // Guardar datos del usuario en SharedPreferences
   await prefs.setString('listDevices', ListDevices);
   await prefs.setString('token', token);
   await prefs.setInt('id', userId);
@@ -43,22 +40,14 @@ void saveData(data, devices) async {
 }
 
 void showCorrectDialog(BuildContext context, String authority) {
-  AwesomeDialog(
-    context: context,
-    dialogType: DialogType.success,
-    animType: AnimType.bottomSlide,
-    title: "Correcto",
-    desc: "Las credenciales son correctas",
-  ).show();
-
+ 
   Future.delayed(Duration(seconds: 2), () {
-    // Redirigir según el rol del usuario
     if (authority == 'TECHNICIAN') {
       Navigator.pushNamed(
-          context, '/menuTechnician'); // Navegar al menú de técnicos
+          context, '/menuTechnician'); 
     } else {
       Navigator.pushNamed(
-          context, '/menuClient'); // Navegar al menú de clientes
+          context, '/menuClient'); 
     }
   });
 }
@@ -183,7 +172,7 @@ class _LoginState extends State<Login> {
                                 options: Options(
                                   validateStatus: (status) =>
                                       status! <
-                                      500, // No lanza excepción para códigos < 500
+                                      500, 
                                 ),
                               );
                               if (response.statusCode == 200) {
@@ -220,7 +209,7 @@ class _LoginState extends State<Login> {
                                 } else {
                                    DialogService().showInfoDialog(
                                     context,
-                                    title: 'INFO',
+                                    title: 'A',
                                     description: 'Este tipo de usuario no está disponible para esta plataforma',
                                 );
                                 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:sigser_front/modules/kernel/widgets/custom_text_field_password.dart';
 
 class Profile extends StatefulWidget {
@@ -16,18 +17,16 @@ class _ProfileState extends State<Profile> {
       TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  // Variables para almacenar los datos del usuario
   String name = '';
   String lastname = '';
   String email = '';
   String phone = '';
 
-  // Recupera los datos desde SharedPreferences
   Future<void> loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       name = prefs.getString('name') ?? 'Sin Nombre';
-      lastname =prefs.getString('lastname') ?? 'Sin Apellido'; // Agregar lastName
+      lastname = prefs.getString('lastname') ?? 'Sin Apellido';
       email = prefs.getString('email') ?? 'Sin Correo';
       phone = prefs.getString('phone') ?? 'Sin Teléfono';
     });
@@ -36,7 +35,7 @@ class _ProfileState extends State<Profile> {
   @override
   void initState() {
     super.initState();
-    loadUserData(); // Carga los datos al iniciar el widget
+    loadUserData();
   }
 
   String? validatePassword(String? value) {
@@ -104,7 +103,7 @@ class _ProfileState extends State<Profile> {
               ),
               const SizedBox(height: 17),
               Text(
-                '$name $lastname', // Mostrar nombre y apellido
+                '$name $lastname',
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -124,13 +123,11 @@ class _ProfileState extends State<Profile> {
                   color: Colors.grey,
                 ),
               ),
-
               const SizedBox(height: 25),
               const Divider(
                 color: Colors.grey,
                 thickness: 1,
               ),
-              // Botón de cambiar contraseña
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.white,
@@ -141,57 +138,40 @@ class _ProfileState extends State<Profile> {
                   minimumSize: const Size(double.infinity, 42),
                 ),
                 onPressed: () {
-                  showDialog(
+                  AwesomeDialog(
                     context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: const Text(
-                          'Cambiar Contraseña',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        content: SingleChildScrollView(
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                TextFieldPassword(
-                                  controller: _newPasswordController,
-                                  validator: validatePassword,
-                                ),
-                                const SizedBox(height: 13),
-                                TextFieldPassword(
-                                  controller: _confirmPasswordController,
-                                  validator: validateConfirmPassword,
-                                ),
-                                const SizedBox(height: 13),
-                              ],
-                            ),
+                    dialogType: DialogType.info,
+                    animType: AnimType.scale,
+                    title: 'Cambiar Contraseña',
+                    body: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TextFieldPassword(
+                            controller: _newPasswordController,
+                            validator: validatePassword,
                           ),
-                        ),
-                        actions: [
-                          ElevatedButton(
-                            onPressed: () {
-                              if (_formKey.currentState?.validate() ?? false) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text(
-                                            'Contraseña cambiada con éxito')));
-                                Navigator.of(context).pop();
-                              }
-                            },
-                            child: const Text('Cambiar Contraseña'),
+                          const SizedBox(height: 13),
+                          TextFieldPassword(
+                            controller: _confirmPasswordController,
+                            validator: validateConfirmPassword,
                           ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text('Cancelar'),
-                          ),
+                          const SizedBox(height: 13),
                         ],
-                      );
+                      ),
+                    ),
+                    btnOkText: 'Cambiar',
+                    btnOkOnPress: () {
+                      if (_formKey.currentState?.validate() ?? false) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Contraseña cambiada con éxito')),
+                        );
+                      }
                     },
-                  );
+                    btnCancelOnPress: () {},
+                  ).show();
                 },
                 child: const Text('Cambiar Contraseña'),
               ),
@@ -199,46 +179,43 @@ class _ProfileState extends State<Profile> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.white,
-                  backgroundColor: const Color(0xFFad280c),
+                  backgroundColor: const Color.fromARGB(255, 111, 3, 3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                   minimumSize: const Size(double.infinity, 42),
                 ),
                 onPressed: () {
-                  showDialog(
+                  AwesomeDialog(
                     context: context,
-                    builder: (BuildContext context) => AlertDialog(
-                      title: const Text('Cerrar Sesión'),
-                      content: const Text(
-                          '¿Estás seguro de que deseas cerrar sesión?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                          child: const Text('Cancelar'),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            // Aquí se limpia la información de sesión
-                            SharedPreferences prefs =
-                                await SharedPreferences.getInstance();
-                            await prefs.remove('name'); // Elimina el nombre
-                            await prefs
-                                .remove('lastName'); // Elimina el apellido
-                            await prefs.remove('email'); // Elimina el correo
-                            await prefs.remove('phone'); // Elimina el teléfono
-
-                            // Navega a la pantalla de inicio de sesión
-                            Navigator.pushNamed(context,
-                                '/login'); // Asegúrate de tener configurada la ruta '/login'
-                          },
-                          child: const Text('Aceptar'),
-                        ),
-                      ],
+                    dialogType: DialogType.warning,
+                    animType: AnimType.scale,
+                    title: 'Cerrar Sesión',
+                    desc: '¿Estás seguro de que deseas cerrar sesión?',
+                    btnCancel: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: const Color.fromARGB(255, 111, 3, 3),
+                      ),
+                      child: const Text('Cancelar'),
                     ),
-                  );
+                    btnOk: ElevatedButton(
+                      onPressed: () async {
+                        SharedPreferences prefs =
+                            await SharedPreferences.getInstance();
+                        await prefs.clear();
+                        Navigator.pushNamed(context, '/login');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: const Color(0xFF172554),
+                      ),
+                      child: const Text('Aceptar'),
+                    ),
+                  ).show();
                 },
                 child: const Text('Cerrar Sesión'),
               ),
