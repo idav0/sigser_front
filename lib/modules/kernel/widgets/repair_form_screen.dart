@@ -1,9 +1,13 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image/image.dart' as img;
+import 'package:image_picker/image_picker.dart';
+import 'package:image_input/image_input.dart';
 
 class RepairFormScreen extends StatefulWidget {
   final int repairId;
@@ -21,8 +25,8 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
   final List<TextEditingController> _partsControllers = [];
   final Dio _dio = Dio();
   bool _addPartsVisible = false;
-  bool isLoading = false; 
-
+  bool isLoading = false;
+  List<XFile> imageInputImages = [];
   final RegExp _validInputRegex = RegExp(r'^[a-zA-Z0-9ñÑ\s]+$');
 
   @override
@@ -44,6 +48,22 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
       return 'Solo se permiten letras, números y espacios.';
     }
     return null;
+  }
+
+  Future<String> compressAndConvertToBase64(Uint8List imageBytes,
+      {int maxSizeInBytes = 3 * 1024 * 1024}) async {
+    img.Image? decodedImage = img.decodeImage(imageBytes);
+    if (decodedImage == null) {
+      throw Exception('Error al decodificar la imagen');
+    }
+    int quality = 100;
+    Uint8List compressedImage;
+    do {
+      compressedImage =
+          Uint8List.fromList(img.encodeJpg(decodedImage, quality: quality));
+      quality -= 10;
+    } while (compressedImage.lengthInBytes > maxSizeInBytes && quality > 0);
+    return base64Encode(compressedImage);
   }
 
   void _addPartField() {
@@ -77,48 +97,53 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
-        isLoading = true; 
+        isLoading = true;
       });
-
-      final String diagnosticObservations = _technicianObservationsController.text;
-      final double diagnosticEstimatedCost = double.parse(_estimatedCostController.text);
-      final String diagnosticParts = _partsControllers.map((controller) => controller.text).join(', ');
-
+      final String diagnosticObservations =
+          _technicianObservationsController.text;
+      final double diagnosticEstimatedCost =
+          double.parse(_estimatedCostController.text);
+      final String diagnosticParts =
+          _partsControllers.map((controller) => controller.text).join(', ');
+      final List<String> base64Images = await Future.wait(
+        imageInputImages.map((image) async {
+          final imageBytes = await image.readAsBytes();
+          return await compressAndConvertToBase64(imageBytes);
+        }),
+      );
       final Map<String, dynamic> requestData = {
         "id": widget.repairId,
         "diagnostic_observations": diagnosticObservations,
         "diagnostic_parts": diagnosticParts,
         "diagnostic_estimated_cost": diagnosticEstimatedCost,
+        "diagnostic_images": base64Images,
       };
-
-      final String url = '${dotenv.env['BASE_URL']}/repair/status/end-diagnostic';
-
+      final String url =
+          '${dotenv.env['BASE_URL']}/repair/status/end-diagnostic';
       try {
         final prefs = await SharedPreferences.getInstance();
         final token = prefs.getString('token') ?? '';
         final authority = prefs.getString('rol') ?? '';
         final userId = prefs.getInt('id') ?? 0;
-
         final response = await _dio.put(
           url,
           data: jsonEncode(requestData),
-          options: Options(headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'}),
+          options: Options(headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json'
+          }),
         );
-
         if (response.statusCode == 200) {
           final String devicesUrl = authority == "TECHNICIAN"
               ? '${dotenv.env['BASE_URL']}/repair/technician/$userId'
               : '${dotenv.env['BASE_URL']}/repair/client/$userId';
-
           final devicesResponse = await _dio.get(
             devicesUrl,
             options: Options(headers: {'Authorization': 'Bearer $token'}),
           );
-
           if (devicesResponse.statusCode == 200) {
             final devicesData = devicesResponse.data;
             _saveDevices(devicesData);
-
             AwesomeDialog(
               context: context,
               dialogType: DialogType.success,
@@ -152,7 +177,7 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
           dialogType: DialogType.error,
           animType: AnimType.bottomSlide,
           title: 'Error de conexión',
-          desc: 'Error al conectar con el servidor: $e',
+          desc: 'Error al conectar con el servidor',
         ).show();
       } finally {
         setState(() {
@@ -160,6 +185,27 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
         });
       }
     }
+  }
+
+  Future<ImageSource?> _showImageSourceDialog() {
+    return showDialog<ImageSource>(
+      context: context,
+      builder: (context) {
+        return SimpleDialog(
+          title: const Text('Seleccionar fuente de la imagen'),
+          children: [
+            SimpleDialogOption(
+              child: const Text('Cámara'),
+              onPressed: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            SimpleDialogOption(
+              child: const Text('Galería'),
+              onPressed: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -207,12 +253,15 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
                         icon: const Icon(Icons.build, color: Colors.white),
                         label: const Text(
                           'Agregar pieza',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.bold),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(255, 113, 121, 137),
+                          backgroundColor:
+                              const Color.fromARGB(255, 113, 121, 137),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -221,6 +270,52 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
                     ),
                     const SizedBox(height: 16),
                   ],
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Evidencia (Imágenes)'),
+                  const SizedBox(height: 8),
+                  ImageInput(
+                    images: imageInputImages,
+                    allowEdit: true,
+                    allowMaxImage: 10,
+                    onImageSelected: (image) async {
+                      final imageBytes = await image.readAsBytes();
+                      final fileSize = imageBytes.lengthInBytes;
+                      if (fileSize > 3 * 1024 * 1024) {
+                        AwesomeDialog(
+                          context: context,
+                          dialogType: DialogType.warning,
+                          animType: AnimType.bottomSlide,
+                          title: 'Tamaño de la imagen',
+                          desc:
+                              'El tamaño de la imagen no puede ser mayor a 3MB.',
+                        ).show();
+                        return;
+                      }
+                      final fileExtension =
+                          image.name.split('.').last.toLowerCase();
+                      if (fileExtension != 'jpg' && fileExtension != 'jpeg') {
+                        AwesomeDialog(
+                          context: context,
+                          dialogType: DialogType.warning,
+                          animType: AnimType.bottomSlide,
+                          title: 'Formato no válido',
+                          desc:
+                              'Solo se permiten imágenes en formato JPG o JPEG.',
+                        ).show();
+                        return;
+                      }
+                      setState(() {
+                        imageInputImages.add(image);
+                      });
+                    },
+                    onImageRemoved: (image, index) {
+                      setState(() {
+                        imageInputImages.removeAt(index);
+                      });
+                    },
+                    getImageSource: _showImageSourceDialog,
+                  ),
+                  const SizedBox(height: 24),
                   _buildSectionTitle('Costo Estimado de Diagnóstico'),
                   const SizedBox(height: 8),
                   _buildTextField(
@@ -263,11 +358,12 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.pop(context); 
+                            Navigator.pop(context);
                           },
                           style: ElevatedButton.styleFrom(
                             foregroundColor: Colors.white,
-                            backgroundColor: const Color.fromARGB(255, 111, 3, 3),
+                            backgroundColor:
+                                const Color.fromARGB(255, 111, 3, 3),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -300,10 +396,7 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(
-        fontWeight: FontWeight.bold,
-        fontSize: 16,
-      ),
+      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
     );
   }
 
@@ -326,7 +419,7 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
     );
   }
 
-    Widget _buildAddPartButtons() {
+  Widget _buildAddPartButtons() {
     return Row(
       children: [
         ElevatedButton(
@@ -387,10 +480,8 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Piezas Reemplazadas',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+        const Text('Piezas Reemplazadas',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         for (int i = 0; i < _partsControllers.length; i++) ...[
           Row(
