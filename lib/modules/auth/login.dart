@@ -20,18 +20,16 @@ void saveData(data, devices) async {
   final prefs = await SharedPreferences.getInstance();
 
   var userInfo = data['data']['userInfo'];
-  var authority = userInfo['authorities'][0]['authority']; // Obtener rol
+  var authority = userInfo['authorities'][0]['authority']; 
   var userId = userInfo['id'];
   var token = data['data']['loginInfo']['token'];
 
-  // Validar y asignar valores
-  var name = userInfo['name'] ?? ''; // Usar valor predeterminado si es nulo
+  var name = userInfo['name'] ?? '';
   var lastname = userInfo['lastname'] ?? '';
   var email = userInfo['email'] ?? '';
   var phone = userInfo['phone'] ?? '';
   var ListDevices = jsonEncode(devices['data']);
 
-  // Guardar datos del usuario en SharedPreferences
   await prefs.setString('listDevices', ListDevices);
   await prefs.setString('token', token);
   await prefs.setInt('id', userId);
@@ -183,7 +181,7 @@ class _LoginState extends State<Login> {
                                 options: Options(
                                   validateStatus: (status) =>
                                       status! <
-                                      500, // No lanza excepción para códigos < 500
+                                      500, 
                                 ),
                               );
                               if (response.statusCode == 200) {
