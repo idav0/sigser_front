@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 class DeviceUtils {
   static IconData getDeviceIcon(String tipo) {
     switch (tipo) {
@@ -21,9 +20,9 @@ class DeviceUtils {
       case 'RECEIVED':
         return Icons.add_task;
       case 'DIAGNOSIS':
-        return Icons.attach_money_rounded;
+        return Icons.monetization_on_rounded;
       case 'QUOTATION':
-        return Icons.receipt_long_outlined;
+        return Icons.receipt_long;
       case 'WAITING_FOR_COSTUMER_APPROVAL':
         return Icons.hourglass_empty;
       case 'WAITING_FOR_PARTS':
@@ -61,4 +60,28 @@ class DeviceUtils {
         return Colors.grey;
     }
   }
+
+  static String translateEstado(String estado) {
+    switch (estado) {
+      case 'RECEIVED':
+        return 'Recibido';
+      case 'DIAGNOSIS':
+        return 'En diagnóstico';
+      case 'QUOTATION':
+        return 'Cotización';
+      case 'WAITING_FOR_CUSTOMER_APPROVAL':
+        return 'Esperando aprobación del cliente';
+      case 'WAITING_FOR_PARTS':
+        return 'Esperando piezas';
+      case 'REPAIRING':
+        return 'En reparación';
+      case 'READY_FOR_COLLECTION':
+        return 'Listo para recoger';
+      case 'COLLECTED':
+        return 'Recogido';
+      default:
+        return 'Desconocido';
+    }
+  }
 }
+

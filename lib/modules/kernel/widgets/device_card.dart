@@ -43,7 +43,7 @@ class DeviceCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  device['estado'],
+                  DeviceUtils.translateEstado(device['estado']), 
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.blue,

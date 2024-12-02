@@ -22,6 +22,7 @@ class _DevicesState extends State<Devices> {
     super.initState();
     _loadDevicesFromPreferences();
   }
+
   Future<void> _loadDevicesFromPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -30,7 +31,9 @@ class _DevicesState extends State<Devices> {
       if (devicesJson != null) {
         final List<dynamic> jsonList = jsonDecode(devicesJson);
 
-        final List<Map<String, dynamic>> adaptedDevices = jsonList.map((device) {
+        final List<Map<String, dynamic>> adaptedDevices = jsonList
+            .where((device) => device['repairStatus']['name'] != 'COLLECTED')
+            .map((device) {
           final deviceData = device['device'] ?? {};
           final repairStatus = device['repairStatus'] ?? {};
 
@@ -49,6 +52,7 @@ class _DevicesState extends State<Devices> {
         }).toList();
 
         setState(() {
+          devices.clear();
           devices.addAll(adaptedDevices);
         });
       }
@@ -64,14 +68,35 @@ class _DevicesState extends State<Devices> {
     });
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+      final authority = prefs.getString('rol') ?? '';
+      final userId = prefs.getInt('id') ?? 0;
+
       final String url = '${dotenv.env['BASE_URL']}/repair/status/$endpoint/$repairId';
-      final response = await http.put(Uri.parse(url));
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
+      );
 
       if (response.statusCode == 200) {
-        _showSnackBar(successMessage);
-        setState(() {
-          devices.removeWhere((device) => device['id'] == repairId);
-        });
+        final String devicesUrl = authority == "TECHNICIAN"
+            ? '${dotenv.env['BASE_URL']}/repair/technician/$userId'
+            : '${dotenv.env['BASE_URL']}/repair/client/$userId';
+
+        final devicesResponse = await http.get(
+          Uri.parse(devicesUrl),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+
+        if (devicesResponse.statusCode == 200) {
+          final devicesData = jsonDecode(devicesResponse.body);
+          _saveDevices(devicesData); 
+          _loadDevicesFromPreferences(); 
+          _showSnackBar(successMessage);
+        } else {
+          _showSnackBar('Error al actualizar dispositivos.');
+        }
       } else {
         _showSnackBar('Error: ${response.statusCode}');
       }
@@ -85,11 +110,25 @@ class _DevicesState extends State<Devices> {
   }
 
   Future<void> _startDiagnostic(String repairId) async {
-    await _performNetworkAction(repairId, 'start-diagnostic', 'Diagnóstico iniciado correctamente.');
+    await _performNetworkAction(
+        repairId, 'start-diagnostic', 'Diagnóstico iniciado correctamente.');
   }
 
   Future<void> _startRepair(String repairId) async {
-    await _performNetworkAction(repairId, 'start-repair', 'Reparación iniciada correctamente.');
+    await _performNetworkAction(
+        repairId, 'start-repair', 'Reparación iniciada correctamente.');
+  }
+
+  void _saveDevices(devices) async {
+    final prefs = await SharedPreferences.getInstance();
+    final listDevices = jsonEncode(devices['data']);
+    await prefs.setString('listDevices', listDevices);
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   void _showDiagnosticModal(BuildContext context, Map<String, dynamic> device) {
@@ -100,12 +139,6 @@ class _DevicesState extends State<Devices> {
         onDiagnosticStart: () => _startDiagnostic(device['id']),
         onRepairStart: () => _startRepair(device['id']),
       ),
-    );
-  }
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
     );
   }
 
