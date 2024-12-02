@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:geolocator/geolocator.dart';
 
 import 'package:sigser_front/modules/kernel/widgets/custom_text_field_password.dart';
 import 'package:sigser_front/modules/kernel/widgets/dialog_service.dart';
@@ -19,7 +20,7 @@ void saveData(data, devices) async {
   final prefs = await SharedPreferences.getInstance();
 
   var userInfo = data['data']['userInfo'];
-  var authority = userInfo['authorities'][0]['authority']; 
+  var authority = userInfo['authorities'][0]['authority'];
   var userId = userInfo['id'];
   var token = data['data']['loginInfo']['token'];
 
@@ -40,16 +41,35 @@ void saveData(data, devices) async {
 }
 
 void showCorrectDialog(BuildContext context, String authority) {
- 
   Future.delayed(Duration(seconds: 2), () {
     if (authority == 'TECHNICIAN') {
-      Navigator.pushNamed(
-          context, '/menuTechnician'); 
+      Navigator.pushNamed(context, '/menuTechnician');
     } else {
-      Navigator.pushNamed(
-          context, '/menuClient'); 
+      Navigator.pushNamed(context, '/menuClient');
     }
   });
+}
+
+Future<Position> _determinePosition() async {
+  bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  if (!serviceEnabled) {
+    await Geolocator.openLocationSettings();
+    return Future.error('Location services are disabled.');
+  }
+
+  LocationPermission permission = await Geolocator.checkPermission();
+  if (permission == LocationPermission.denied) {
+    permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied) {
+      return Future.error('Location permissions are denied.');
+    }
+  }
+
+  if (permission == LocationPermission.deniedForever) {
+    return Future.error('Location permissions are permanently denied.');
+  }
+
+  return await Geolocator.getCurrentPosition();
 }
 
 class _LoginState extends State<Login> {
@@ -170,17 +190,23 @@ class _LoginState extends State<Login> {
                                 '/auth/login',
                                 data: dataUser,
                                 options: Options(
-                                  validateStatus: (status) =>
-                                      status! <
-                                      500, 
+                                  validateStatus: (status) => status! < 500,
                                 ),
                               );
+
                               if (response.statusCode == 200) {
                                 var userInfo =
                                     response.data['data']['userInfo'];
                                 var authority =
                                     userInfo['authorities'][0]['authority'];
                                 var id = userInfo['id'];
+
+                                Position position =
+                                    await _determinePosition(); 
+
+                                print(
+                                    'Ubicación actual: Lat: ${position.latitude}, Long: ${position.longitude}');
+                                print('ID del usuario: $id');
 
                                 if (authority == "TECHNICIAN") {
                                   final devices = await _dio.get(
@@ -193,7 +219,8 @@ class _LoginState extends State<Login> {
                                     ),
                                   );
                                   saveData(response.data, devices.data);
-                                  showCorrectDialog(context, authority);
+                                  Navigator.pushNamed(
+                                      context, '/menuTechnician');
                                 } else if (authority == "CLIENT") {
                                   final devices = await _dio.get(
                                     '/repair/client/$id',
@@ -205,39 +232,25 @@ class _LoginState extends State<Login> {
                                     ),
                                   );
                                   saveData(response.data, devices.data);
-                                  showCorrectDialog(context, authority);
+                                  Navigator.pushNamed(context, '/menuClient');
                                 } else {
-                                   DialogService().showInfoDialog(
+                                  DialogService().showInfoDialog(
                                     context,
                                     title: 'A',
-                                    description: 'Este tipo de usuario no está disponible para esta plataforma',
-                                );
+                                    description:
+                                        'Este tipo de usuario no está disponible para esta plataforma',
+                                  );
                                 }
-                              } else if (response.statusCode == 403) {
-                                Navigator.pushNamed(context, '/changePassword');
-                              } else if (response.statusCode == 401) {
-                                DialogService().showErrorDialog(
-                                    context,
-                                    title: 'ERROR',
-                                    description: 'Credenciales incorrectas',
-                                );
-                              } else {
-                                 DialogService().showErrorDialog(
-                                    context,
-                                    title: 'ERROR',
-                                    description: 'Error inesperado: ${response.statusCode}',
-                                );
-  
                               }
                             } catch (e) {
-                              if (e is DioException) {                              
-                                  DialogService().showErrorDialog(
-                                    context,
-                                    title: 'ERROR',
-                                    description: 'Error inesperado: ${e.response?.statusCode}',
+                              if (e is DioException) {
+                                DialogService().showErrorDialog(
+                                  context,
+                                  title: 'ERROR',
+                                  description:
+                                      'Error inesperado: ${e.response?.statusCode}',
                                 );
                               }
-                              
                             }
                           }
                         },
