@@ -21,18 +21,32 @@ class DeviceDetailsModal extends StatelessWidget {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(message),
+          title: Text(
+            message, 
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('No'),
+              child: const Text(
+                'No',
+                style: TextStyle(color: Colors.white), // Texto blanco
+              ),
+              style: TextButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 141, 28, 28), // Rojo oscuro
+              ),
             ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
                 onConfirm();
               },
-              child: const Text('Sí'),
+              child: const Text(
+                'Sí',
+                style: TextStyle(color: Colors.white), // Texto blanco
+              ),
+              style: TextButton.styleFrom(
+                backgroundColor: Color.fromARGB(255, 12, 18, 104), // Verde oscuro
+              ),
             ),
           ],
         ),
@@ -95,7 +109,7 @@ class DeviceDetailsModal extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => RepairFormScreen(
-                    repairId: int.parse(device['id']),
+                    repairId: int.parse(device['id'] ?? '0'),
                   ),
                 ),
               );
@@ -135,7 +149,7 @@ class DeviceDetailsModal extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => CompleteRepairFormScreen(
-                    repairId: int.parse(device['id']),
+                    repairId: int.parse(device['id'] ?? '0'),
                   ),
                 ),
               );
