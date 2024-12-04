@@ -9,7 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_stripe: ^11.3.0
   font_awesome_flutter: ^10.8.0
+  image: ^4.3.0
+  image_input: ^0.0.5
+  image_picker: ^1.1.2
   mobile_scanner: ^6.0.2
 
 dev_dependencies:

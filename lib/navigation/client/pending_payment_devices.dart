@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dio/dio.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:sigser_front/modules/kernel/widgets/StripePaymentService.dart';
 import 'package:sigser_front/modules/kernel/widgets/dialog_service.dart';
 
 class PendingPaymentDevices extends StatefulWidget {
@@ -30,6 +31,7 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
         );
       },
       btnOkOnPress: () async {
+
         final prefs = await SharedPreferences.getInstance();
         String? token = prefs.getString('token');
 
@@ -43,14 +45,22 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
           ),
         );
         if (response.statusCode == 200) {
-          DialogService().showSuccessDialog(
-            context,
-            title: 'ÉXITO',
-            description: 'Operación realizada con éxito',
-          );
+          StripePaymentService.instance.makePayment(200,"usd");
+
+          // DialogService().showSuccessDialog(
+          //   context,
+          //   title: 'ÉXITO',
+          //   description: 'Operación realizada con éxito',
+          // );
           setState(() {
             device['pago'] = true;
           });
+        }else{
+          DialogService().showErrorDialog(
+            context,
+            title: 'Error',
+            description: 'La operacion se cancelo',
+          );
         }
       },
     ).show();
@@ -85,7 +95,7 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
             'marca': device['device']['brand'].toString(),
             'serie': device['device']['serialNumber'].toString(),
             'problema': device['problem_description'].toString(),
-            'costoTotal': device['diagnostic_estimated_cost'].toString(),
+            'costoTotal': device['diagnostic_estimated_cost'],
             'cliente': device['cliente'] ?? 'Desconocido',
             'fecha': formattedDate,
             'diagnostico': (device['diagnostic_observations'] ?? 'N/A').toString(),
