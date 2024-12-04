@@ -45,7 +45,7 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
           ),
         );
         if (response.statusCode == 200) {
-          StripePaymentService.instance.makePayment(200,"usd");
+          StripePaymentService.instance.makePayment(device['costoTotal'],"mxn");
 
           // DialogService().showSuccessDialog(
           //   context,
