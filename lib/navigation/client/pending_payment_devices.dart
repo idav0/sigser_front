@@ -14,7 +14,7 @@ class PendingPaymentDevices extends StatefulWidget {
   State<PendingPaymentDevices> createState() => _PendingPaymentDevicesState();
 }
 
-class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
+class _PendingPaymentDevicesState extends State<PendingPaymentDevices> with AutomaticKeepAliveClientMixin{
   final Dio _dio = Dio(BaseOptions(baseUrl: '${dotenv.env['BASE_URL']}'));
   List<Map<String, dynamic>> devices = [];
 
@@ -27,44 +27,32 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
       desc: '¿Deseas pagar en este momento tu reparacion?',
       btnCancelOnPress: () {
         DialogService().showErrorDialog(
-          context
+          context,
+          title: "Cancelada",
+          description: "Operación Cancelada"
         );
       },
       btnOkOnPress: () async {
 
-        final prefs = await SharedPreferences.getInstance();
-        String? token = prefs.getString('token');
-
-        final response = await _dio.put(
-          '/repair/status/paid/${device['id']}',
-          options: Options(
-            headers: {
-              'Authorization': 'Bearer $token',
-            },
-            validateStatus: (status) => status! < 500,
-          ),
-        );
-        if (response.statusCode == 200) {
-          StripePaymentService.instance.makePayment(device['costoTotal'],"mxn");
-
-          // DialogService().showSuccessDialog(
-          //   context,
-          //   title: 'ÉXITO',
-          //   description: 'Operación realizada con éxito',
-          // );
+        await StripePaymentService.instance.makePayment(
+        device['costoTotal'],
+        "mxn",
+        context,
+        device,
+        onPaymentSuccess: () async  {
           setState(() {
             device['pago'] = true;
           });
-        }else{
-          DialogService().showErrorDialog(
-            context,
-            title: 'Error',
-            description: 'La operacion se cancelo',
-          );
-        }
-      },
+        },
+      );
+    },
     ).show();
   }
+   @override
+  bool get wantKeepAlive => true;
+
+ 
+
 
   @override
   void initState() {
@@ -72,9 +60,13 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
     _loadDevicesFromPreferences();
   }
 
+ 
+
   Future<void> _loadDevicesFromPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     String? devicesJson = prefs.getString('listDevices');
+       int? idUser = prefs.getInt('id');
+
 
     if (devicesJson != null) {
       try {
@@ -120,8 +112,9 @@ class _PendingPaymentDevicesState extends State<PendingPaymentDevices> {
 
   @override
   Widget build(BuildContext context) {
+
     final pendingPaymentDevices =
-        devices.where((device) => device['pago'] == false && device['idStatus'] > 4).toList();
+        devices.where((device) => device['pago'] == false && device['idStatus'] > 4 ).toList();
 
     return Scaffold(
       appBar: AppBar(
