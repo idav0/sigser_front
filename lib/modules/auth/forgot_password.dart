@@ -43,6 +43,13 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Recuperar contraseña'),
+        backgroundColor: const Color.fromARGB(255, 70, 90, 156),
+        titleTextStyle: const TextStyle(fontSize: 16, color: Colors.white),
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
       body: Stack(
         children: [
           const Positioned(
@@ -100,18 +107,9 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                       width: 200,
                       height: 200,
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      '¿Olvidaste tu contraseña?',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Ingresa tu correo de recuperación',
+                      'Ingresa el correo electrónico asociado a tu cuenta y te enviaremos un correo de recuperación',
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.grey,
@@ -136,14 +134,14 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                       child: ElevatedButton(
                         onPressed: _sendRecoveryEmail,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(255, 5, 8, 167),
+                          backgroundColor: const Color.fromARGB(255, 0, 0, 0),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
                         child: const Text(
-                          'Enviar correo de recuperación',
+                          'Solictar recuperación',
                           style: TextStyle(fontSize: 18),
                         ),
                       ),

@@ -31,16 +31,15 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       routes: {
-        '/': (context) => SplashScreen(),
-        '/login': (context) => Login(),
-        '/forgotPassword': (context) => ForgotPassword(),
-        '/menuClient': (context) => NavigationClient(),
-        '/menuTechnician': (context) => NavigationTechnician(),
-        '/viewDevicesTech': (context) => Devices(),
-        '/viewDevicesClient': (context) => DevicesClient(),
-        '/changePassword': (context) => ChangePassword(),
-        '/forgotPassword': (context) => ForgotPassword(),
-        '/recoverPassword': (context) => RecoverPassword()
+        '/': (context) => const SplashScreen(),
+        '/login': (context) => const Login(),
+        '/forgotPassword': (context) => const ForgotPassword(),
+        '/menuClient': (context) => const NavigationClient(),
+        '/menuTechnician': (context) => const NavigationTechnician(),
+        '/viewDevicesTech': (context) => const Devices(),
+        '/viewDevicesClient': (context) => const DevicesClient(),
+        '/changePassword': (context) => const ChangePassword(),
+        '/recoverPassword': (context) => const RecoverPassword()
 
 
         

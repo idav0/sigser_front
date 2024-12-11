@@ -223,6 +223,8 @@ class _TechnicianProfileState extends State<TechnicianProfile> {
                             await prefs.remove('lastname');
                             await prefs.remove('email'); 
                             await prefs.remove('phone');
+                            await prefs.remove('token');
+                            await prefs.remove('rol');
                             Navigator.pushNamed(context, '/login');
                           },
                           child: const Text('Aceptar'),
