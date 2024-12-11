@@ -9,12 +9,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_local_notifications: ^18.0.1
   flutter_stripe: ^11.3.0
   font_awesome_flutter: ^10.8.0
   image: ^4.3.0
   image_input: ^0.0.5
   image_picker: ^1.1.2
   mobile_scanner: ^6.0.2
+  mqtt_client: ^10.5.1
 
 dev_dependencies:
   flutter_test:

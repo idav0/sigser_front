@@ -10,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 
 import 'package:sigser_front/modules/kernel/widgets/custom_text_field_password.dart';
 import 'package:sigser_front/modules/kernel/widgets/dialog_service.dart';
+import 'package:sigser_front/modules/mqtt/mqtt_service.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -239,6 +240,9 @@ return responseCode.toString();
 class _LoginState extends State<Login> {
   final Dio _dio = Dio(BaseOptions(baseUrl: '${dotenv.env['BASE_URL']}'));
 
+  late MqttService mqttService;
+  String topic = 'sigser/notifications';
+
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -390,8 +394,11 @@ class _LoginState extends State<Login> {
                                       ),
                                     );
                                     saveData(response.data, devices.data);
+                                    topic = 'sigser/notifications/technician/$id';
+                                    //mqttService.connect(topic);
                                     Navigator.pushNamed(
                                         context, '/menuTechnician');
+
                                   } else if (authority == "CLIENT") {
                                     final devices = await _dio.get(
                                       '/repair/client/$id',
@@ -403,6 +410,8 @@ class _LoginState extends State<Login> {
                                       ),
                                     );
                                     saveData(response.data, devices.data);
+                                    topic = 'sigser/notifications/client/$id';
+                                    //mqttService.connect(topic);
                                     Navigator.pushNamed(context, '/menuClient');
                                   } else {
                                     DialogService().showInfoDialog(

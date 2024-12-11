@@ -5,19 +5,26 @@ import 'package:sigser_front/modules/auth/login.dart';
 import 'package:sigser_front/modules/auth/recover_password.dart';
 import 'package:sigser_front/modules/kernel/widgets/change_password.dart';
 import 'package:sigser_front/modules/kernel/widgets/splash_screen.dart';
+import 'package:sigser_front/modules/mqtt/notification_service.dart';
 import 'package:sigser_front/navigation/client/devices_client.dart';
 import 'package:sigser_front/navigation/navigation_client.dart';
 import 'package:sigser_front/navigation/navigation_technician.dart';
 import 'package:sigser_front/navigation/technician/devices.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await dotenv.load(fileName: ".env");
+  
+  final NotificationService notificationService = NotificationService();
+  notificationService.initialize();
+  
   await _setup();
   runApp(const MainApp());
 }
+
 Future<void> _setup() async {
   // Inicializa la clave pública de Stripe
   Stripe.publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? '';
@@ -40,10 +47,6 @@ class MainApp extends StatelessWidget {
         '/viewDevicesClient': (context) => const DevicesClient(),
         '/changePassword': (context) => const ChangePassword(),
         '/recoverPassword': (context) => const RecoverPassword()
-
-
-        
-        
       },
     );
   }
