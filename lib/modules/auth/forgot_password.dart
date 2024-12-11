@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:sigser_front/modules/kernel/widgets/dialog_service.dart';
 
 class ForgotPassword extends StatefulWidget {
   const ForgotPassword({super.key});
@@ -22,21 +25,60 @@ class _ForgotPasswordState extends State<ForgotPassword> {
       return 'Por favor, ingrese un correo electrónico válido';
     } else if (RegExp(r'^[0-9]+$').hasMatch(value)) {
       return 'El correo no puede contener solo números';
-    } else if (value.contains('<') || value.contains('>') || value.contains(';')) {
+    } else if (value.contains('<') ||
+        value.contains('>') ||
+        value.contains(';')) {
       return 'El correo no debe contener caracteres inválidos';
     }
     return null;
   }
 
-  void _sendRecoveryEmail() {
+  Future<void> _sendRecoveryEmail() async {
+    final Dio dio = Dio(BaseOptions(baseUrl: '${dotenv.env['BASE_URL']}'));
+
     if (_formKey.currentState!.validate()) {
       final email = _emailController.text;
-      Navigator.pushNamed(context, '/recoverPassword');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Se ha enviado un correo de recuperación a $email'),
-        ),
-      );
+
+      final datatoken = {
+        'email': email,
+      };
+
+      try {
+        final response = await dio.post(
+          '/auth/forgot-password/token',
+          data: datatoken,
+          options: Options(
+            validateStatus: (status) => status! < 500,
+          ),
+        );
+
+        print(response);
+
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Se ha enviado un correo de recuperación a $email'),
+            ),
+          );
+          Navigator.pushNamed(context, '/recoverPassword', arguments: _emailController.text);
+        } else {
+          DialogService().showErrorDialog(
+            context,
+            title: 'ERROR',
+            description:
+                'Error, verifique que el correo sea correcto y vuelva a intentarlo',
+          );
+        }
+      } catch (e) {
+        if (e is DioException) {
+          DialogService().showErrorDialog(
+            context,
+            title: 'ERROR',
+            description: 'Error inesperado, intente de nuevo',
+          );
+        }
+      }
+
     }
   }
 
@@ -122,8 +164,8 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                       validator: validateEmail,
                       keyboardType: TextInputType.emailAddress,
                       decoration: const InputDecoration(
-                        hintText: 'Correo electrónico',
-                        label: Text('ejemplo@gmail.com'),
+                        hintText: 'ejemplo@gmail.com',
+                        label: Text('Correo Electrónico'),
                         border: OutlineInputBorder(),
                       ),
                     ),

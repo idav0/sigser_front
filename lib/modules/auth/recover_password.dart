@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sigser_front/modules/kernel/widgets/custom_text_field_password.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:sigser_front/modules/kernel/widgets/dialog_service.dart';
 
 class RecoverPassword extends StatefulWidget {
   const RecoverPassword({super.key});
@@ -9,38 +11,88 @@ class RecoverPassword extends StatefulWidget {
 }
 
 class _RecoverPasswordState extends State<RecoverPassword> {
+  late String parametro;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    parametro = ModalRoute.of(context)?.settings.arguments as String? ??
+        'Valor predeterminado';
+  }
+
   final TextEditingController _tokenController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  String? validatePassword(String? value) {
-    final RegExp passwordRegExp = RegExp(
-        r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$');
+  bool obscureText = true;
 
-    if (value == null || value.isEmpty) {
-      return 'Por favor, ingresa una contraseña';
-    } else if (!passwordRegExp.hasMatch(value)) {
-      return 'Debe tener al menos 8 caracteres, 1 mayúscula, 1 número y 1 carácter especial';
-    } else if (value.contains("'") || value.contains("\"") || value.contains(";")) {
-      return 'Caracteres no permitidos';
+  String? validatePassword(String password) {
+    final regex = RegExp(r'^(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$');
+    if (!regex.hasMatch(password)) {
+      return '8 caracteres, una mayúscula y un número.';
     }
     return null;
   }
 
-  void _resetPassword() {
+  Future<void> _resetPassword() async {
     if (_formKey.currentState!.validate()) {
+      final Dio _dio = Dio(BaseOptions(baseUrl: '${dotenv.env['BASE_URL']}'));
+
       if (_passwordController.text != _confirmPasswordController.text) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Las contraseñas no coinciden')),
         );
         return;
       }
+      var dataUser = {
+        'email': parametro,
+        'newPassword': _passwordController.text,
+        'token': _tokenController.text,
+      };
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Contraseña restablecida con éxito')),
-      );
+      try {
+        final response = await _dio.post(
+          '/auth/forgot-password/update-password',
+          data: dataUser,
+          options: Options(
+            validateStatus: (status) => status! < 500,
+          ),
+        );
+
+        print(response);
+
+        if (response.statusCode == 200) {
+          DialogService().showSuccessDialog(
+            context,
+            title: 'Correcto',
+            description: 'La contraseña se ha cambiado correctamente',
+          );
+          Future.delayed(const Duration(seconds: 5), () {
+            Navigator.pushNamed(context, '/login');
+          });
+        } else {
+          DialogService().showErrorDialog(
+            context,
+            title: 'Error',
+            description:
+                'Error, verifique que los datos sean correctos y vuelva a intentarlo',
+          );
+        }
+        print(dataUser);
+      } catch (e) {
+        if (e is DioError) {
+          DialogService().showErrorDialog(
+            context,
+            title: 'Error',
+            description: 'Error inesperado, intente de nuevo',
+          );
+        }
+      }
+
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   const SnackBar(content: Text('Contraseña restablecida con éxito')),
+      // );
     }
   }
 
@@ -50,7 +102,7 @@ class _RecoverPasswordState extends State<RecoverPassword> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Recuperar contraseña'),
+        title: const Text('Cambiar contraseña'),
         backgroundColor: const Color.fromARGB(255, 70, 90, 156),
         titleTextStyle: const TextStyle(fontSize: 16, color: Colors.white),
         elevation: 0,
@@ -66,8 +118,8 @@ class _RecoverPasswordState extends State<RecoverPassword> {
               children: [
                 Image.asset(
                   'assets/logo.png',
-                  width: 80,
-                  height: 80,
+                  width: 150,
+                  height: 150,
                 ),
                 const SizedBox(height: 40),
                 const Text(
@@ -92,22 +144,48 @@ class _RecoverPasswordState extends State<RecoverPassword> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                SizedBox(
-                  width: fieldWidth,
-                  child: TextFieldPassword(
-                    controller: _passwordController,
-                    hintText: 'Nueva contraseña',
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: InputDecoration(
                     labelText: 'Nueva contraseña',
+                    errorMaxLines: 2,
+                    suffixIcon: IconButton(
+                      icon: Icon(obscureText
+                          ? Icons.visibility
+                          : Icons.visibility_off),
+                      onPressed: () {
+                        setState(() {
+                          obscureText = !obscureText;
+                        });
+                      },
+                    ),
                   ),
+                  obscureText: obscureText,
+                  validator: (value) => validatePassword(value ?? ''),
                 ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: fieldWidth,
-                  child: TextFieldPassword(
-                    controller: _confirmPasswordController,
-                    hintText: 'Confirmar contraseña',
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  decoration: InputDecoration(
                     labelText: 'Confirmar contraseña',
+                    suffixIcon: IconButton(
+                      icon: Icon(obscureText
+                          ? Icons.visibility
+                          : Icons.visibility_off),
+                      onPressed: () {
+                        setState(() {
+                          obscureText = !obscureText;
+                        });
+                      },
+                    ),
                   ),
+                  obscureText: obscureText,
+                  validator: (value) {
+                    if (value != _passwordController.text) {
+                      return 'Las contraseñas no coinciden.';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 20),
                 SizedBox(
@@ -115,7 +193,7 @@ class _RecoverPasswordState extends State<RecoverPassword> {
                   child: ElevatedButton(
                     onPressed: _resetPassword,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(255, 5, 8, 167),
+                      backgroundColor: const Color.fromARGB(255, 0, 0, 0),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
