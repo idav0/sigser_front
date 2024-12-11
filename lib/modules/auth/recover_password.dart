@@ -187,7 +187,7 @@ class _RecoverPasswordState extends State<RecoverPassword> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 32),
                 SizedBox(
                   width: fieldWidth,
                   child: ElevatedButton(
@@ -197,7 +197,7 @@ class _RecoverPasswordState extends State<RecoverPassword> {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
                     child: const Text(

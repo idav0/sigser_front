@@ -169,7 +169,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                         border: OutlineInputBorder(),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
                     SizedBox(
                       height: 48,
                       width: double.infinity,
