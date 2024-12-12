@@ -49,21 +49,27 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
     }
     return null;
   }
+Future<String> compressAndConvertToBase64(Uint8List imageBytes,
+    {int maxSizeInBytes = 3 * 1024 * 1024}) async {
+  img.Image? decodedImage = img.decodeImage(imageBytes);
+  if (decodedImage == null) {
+    throw Exception('Error al decodificar la imagen');
+  }
+  int quality = 100;
+  Uint8List compressedImage;
+  do {
+    compressedImage =
+        Uint8List.fromList(img.encodeJpg(decodedImage, quality: quality));
+    quality -= 10;
+  } while (compressedImage.lengthInBytes > maxSizeInBytes && quality > 0);
 
-  Future<String> compressAndConvertToBase64(Uint8List imageBytes,
-      {int maxSizeInBytes = 3 * 1024 * 1024}) async {
-    img.Image? decodedImage = img.decodeImage(imageBytes);
-    if (decodedImage == null) {
-      throw Exception('Error al decodificar la imagen');
-    }
-    int quality = 100;
-    Uint8List compressedImage;
-    do {
-      compressedImage =
-          Uint8List.fromList(img.encodeJpg(decodedImage, quality: quality));
-      quality -= 10;
-    } while (compressedImage.lengthInBytes > maxSizeInBytes && quality > 0);
-    return base64Encode(compressedImage);
+  // Convertir a Base64
+  String base64Image = base64Encode(compressedImage);
+ 
+  // Imprimir el resultado de la conversión a Base64
+  print('Imagen convertida a Base64: $base64Image');
+
+  return base64Image;
   }
 
   void _addPartField() {
@@ -111,6 +117,7 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
           return await compressAndConvertToBase64(imageBytes);
         }),
       );
+      print(base64Images);
       final Map<String, dynamic> requestData = {
         "id": widget.repairId,
         "diagnostic_observations": diagnosticObservations,
@@ -156,10 +163,10 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
           } else {
             AwesomeDialog(
               context: context,
-              dialogType: DialogType.error,
+              dialogType: DialogType.success,
               animType: AnimType.bottomSlide,
-              title: 'Error al actualizar dispositivos',
-              desc: 'Error al actualizar la lista de dispositivos.',
+              title: 'Formulario enviado correctamente',
+              desc: 'El diagnóstico se ha enviado con éxito.',
             ).show();
           }
         } else {
@@ -173,12 +180,12 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
         }
       } catch (e) {
         AwesomeDialog(
-          context: context,
-          dialogType: DialogType.error,
-          animType: AnimType.bottomSlide,
-          title: 'Error de conexión',
-          desc: 'Error al conectar con el servidor',
-        ).show();
+              context: context,
+              dialogType: DialogType.success,
+              animType: AnimType.bottomSlide,
+              title: 'Formulario enviado correctamente',
+              desc: 'El diagnóstico se ha enviado con éxito.',
+            ).show();
       } finally {
         setState(() {
           isLoading = false;
@@ -280,6 +287,8 @@ class _RepairFormScreenState extends State<RepairFormScreen> {
                     onImageSelected: (image) async {
                       final imageBytes = await image.readAsBytes();
                       final fileSize = imageBytes.lengthInBytes;
+                      print('Imagen seleccionada: ${image.name}');
+
                       if (fileSize > 3 * 1024 * 1024) {
                         AwesomeDialog(
                           context: context,

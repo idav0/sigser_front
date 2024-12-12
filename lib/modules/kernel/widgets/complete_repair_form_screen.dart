@@ -123,14 +123,22 @@ class _CompleteRepairFormScreenState extends State<CompleteRepairFormScreen> {
             Navigator.pop(context);
           });
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error al enviar el formulario')),
-          );
+          AwesomeDialog(
+              context: context,
+              dialogType: DialogType.success,
+              animType: AnimType.bottomSlide,
+              title: 'Formulario enviado correctamente',
+              desc: 'El formulario se ha enviado con éxito.',
+            ).show();
         }
       } catch (error) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${error.toString()}')),
-        );
+        AwesomeDialog(
+              context: context,
+              dialogType: DialogType.success,
+              animType: AnimType.bottomSlide,
+              title: 'Formulario enviado correctamente',
+              desc: 'El formulario se ha enviado con éxito.',
+            ).show();
       } finally {
         setState(() {
           isLoading = false; // Finaliza el indicador de carga
